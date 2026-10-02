@@ -83,6 +83,31 @@ async function sendTelegramPhoto(chatId: number, photoUrl: string, caption?: str
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`Telegram sendPhoto failed [${response.status}]: ${errorBody}`);
+    // Plano B: envia o arquivo diretamente (upload) caso o Telegram não consiga baixar o link
+    try {
+      const img = await fetch(photoUrl);
+      const form = new FormData();
+      form.append("chat_id", String(chatId));
+      form.append("photo", new Blob([await img.arrayBuffer()], { type: "image/jpeg" }), "imagem.jpg");
+      if (caption) {
+        form.append("caption", caption);
+        form.append("parse_mode", "HTML");
+      }
+      const retry = await fetch(`${GATEWAY_URL}/sendPhoto`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
+          "X-Connection-Api-Key": process.env["TELEGRAM_API_KEY"] ?? "",
+        },
+        body: form,
+      });
+      if (retry.ok) return;
+      console.error(`Telegram sendPhoto upload failed [${retry.status}]: ${await retry.text()}`);
+    } catch (e) {
+      console.error("sendPhoto upload error", e);
+    }
+    // Último recurso: manda só o texto
+    if (caption) await sendTelegramMessage(chatId, caption);
   }
 }
 

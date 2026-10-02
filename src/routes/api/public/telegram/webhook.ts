@@ -19,7 +19,7 @@ const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 
 // Mensagem de introdução do /game_sinopse (com emoji premium)
 const SINOPSE_INTRO_MESSAGE =
-  "𖼥﹒💋﹒⦙⦙𑊁᷼<tg-emoji emoji-id=\"5003645910681388672\">💋</tg-emoji>OGO DA 📎INOPSE 🙃 ゙౿";
+  `𖼥﹒<tg-emoji emoji-id="5444896024445352143">💋</tg-emoji>﹒⦙⦙𑊁᷼ <tg-emoji emoji-id="5003645910681388672">💋</tg-emoji>OGO DA <tg-emoji emoji-id="5003544549453202818">📎</tg-emoji>INOPSE <tg-emoji emoji-id="4981007597625673295">🙃</tg-emoji> ゙౿`;
 
 function deriveWebhookSecret(telegramApiKey: string): string {
   return createHash("sha256")

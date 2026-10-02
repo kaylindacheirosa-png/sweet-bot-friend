@@ -17,6 +17,10 @@ import {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 
+// Mensagem de introdução do /game_sinopse (com emoji premium)
+const SINOPSE_INTRO_MESSAGE =
+  "𖼥﹒💋﹒⦙⦙𑊁᷼<tg-emoji emoji-id=\"5003645910681388672\">💋</tg-emoji>OGO DA 📎INOPSE 🙃 ゙౿";
+
 function deriveWebhookSecret(telegramApiKey: string): string {
   return createHash("sha256")
     .update(`telegram-webhook:${telegramApiKey}`)
@@ -164,9 +168,12 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // /game_sinopse inicia o jogo de adivinhar pela sinopse
         if (firstWord === "/game_sinopse") {
+          // Envia a introdução e espera 10 segundos antes de começar o jogo
+          await sendTelegramMessage(chatId, SINOPSE_INTRO_MESSAGE);
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
           await sendTelegramMessage(
             chatId,
-            `🍿 <b>Adivinhe pelo comando!</b> São ${SINOPSE_ROUNDS.length} rodadas.\n\n${buildSinopseRound(0, 0)}`,
+            buildSinopseRound(0, 0),
             undefined,
             true,
           );

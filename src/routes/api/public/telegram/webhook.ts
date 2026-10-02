@@ -20,8 +20,8 @@ async function sendTelegramMessage(chatId: number, text: string): Promise<void> 
   const response = await fetch(`${GATEWAY_URL}/sendMessage`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": process.env.TELEGRAM_API_KEY ?? "",
+      Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
+      "X-Connection-Api-Key": process.env["TELEGRAM_API_KEY"] ?? "",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),

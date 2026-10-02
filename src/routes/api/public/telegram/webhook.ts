@@ -16,6 +16,7 @@ import {
 } from "@/lib/telegram-sinopse.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
+const SINOPSE_IMAGE_URL = "https://i.imgur.com/WSx9VxL.jpeg";
 
 // Mensagem de introdução do /game_sinopse (com emoji premium)
 const SINOPSE_INTRO_MESSAGE =
@@ -59,6 +60,23 @@ async function sendTelegramMessage(
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`Telegram sendMessage failed [${response.status}]: ${errorBody}`);
+  }
+}
+
+async function sendTelegramPhoto(chatId: number, photoUrl: string): Promise<void> {
+  const response = await fetch(`${GATEWAY_URL}/sendPhoto`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
+      "X-Connection-Api-Key": process.env["TELEGRAM_API_KEY"] ?? "",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`Telegram sendPhoto failed [${response.status}]: ${errorBody}`);
   }
 }
 
@@ -168,7 +186,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // /game_sinopse inicia o jogo de adivinhar pela sinopse
         if (firstWord === "/game_sinopse") {
-          // Envia a introdução e espera 10 segundos antes de começar o jogo
+          // Envia a imagem, a introdução e espera 10 segundos antes de começar o jogo
+          await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL);
           await sendTelegramMessage(chatId, SINOPSE_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           await sendTelegramMessage(

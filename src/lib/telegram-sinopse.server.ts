@@ -8,32 +8,73 @@ export interface SinopseRound {
   display: string;
 }
 
-// Sinopses de exemplo — trocar pelas reais quando o usuário enviar.
+// Jogo com 13 rodadas — obras de boys love. Trocar os placeholders conforme o usuário enviar.
 export const SINOPSE_ROUNDS: SinopseRound[] = [
   {
-    synopsis: "Um leão jovem foge do seu reino após a morte do pai, mas precisa voltar para enfrentar o tio e assumir o trono.",
-    answers: ["o rei leao", "rei leao", "the lion king"],
-    display: "O Rei Leão",
+    synopsis:
+      '"Anos depois na universidade, o ômega se reencontra com seu antigo professor. Descobrindo a verdade sobre ele ser...uma alfa!!"',
+    answers: [], // TODO: definir a resposta certa da rodada 1
+    display: "A definir",
   },
   {
-    synopsis: "Um garoto descobre aos 11 anos que é bruxo e vai estudar numa escola de magia, onde enfrenta o bruxo que matou seus pais.",
-    answers: ["harry potter", "harry potter e a pedra filosofal"],
-    display: "Harry Potter",
+    synopsis: "Sinopse da rodada 2 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
   },
   {
-    synopsis: "Um navio considerado inafundável bate num iceberg em sua viagem inaugural, enquanto um jovem pobre e uma moça rica se apaixonam.",
-    answers: ["titanic"],
-    display: "Titanic",
+    synopsis: "Sinopse da rodada 3 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
   },
   {
-    synopsis: "Brinquedos ganham vida quando os humanos não estão olhando, e um cowboy sente ciúmes do novo astronauta do quarto.",
-    answers: ["toy story"],
-    display: "Toy Story",
+    synopsis: "Sinopse da rodada 4 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
   },
   {
-    synopsis: "Uma princesa com poderes de gelo se isola após congelar seu reino sem querer, e sua irmã parte para trazê-la de volta.",
-    answers: ["frozen", "frozen uma aventura congelante"],
-    display: "Frozen",
+    synopsis: "Sinopse da rodada 5 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 6 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 7 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 8 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 9 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 10 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 11 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 12 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
+  },
+  {
+    synopsis: "Sinopse da rodada 13 será adicionada em breve.",
+    answers: [],
+    display: "A definir",
   },
 ];
 
@@ -49,11 +90,22 @@ function normalize(s: string): string {
     .trim();
 }
 
+// Números em negrito (𝗥𝗢𝗗𝗗𝗗 𝟭), no mesmo estilo da mensagem do usuário
+const BOLD_DIGITS = ["𝟬", "𝟭", "𝟮", "𝟯", "𝟰", "𝟱", "𝟲", "𝟳", "𝟴", "𝟵"];
+function boldNum(n: number): string {
+  return String(n)
+    .split("")
+    .map((d) => BOLD_DIGITS[Number(d)]!)
+    .join("");
+}
+
 export function buildSinopseRound(roundIndex: number, score: number): string {
   const round = SINOPSE_ROUNDS[roundIndex]!;
   return (
-    `🎬 <b>Rodada ${roundIndex + 1} de ${SINOPSE_ROUNDS.length} · Pontos: ${score}</b>\n\n` +
-    `<i>${round.synopsis}</i>\n\n✍️ Responda esta mensagem com o nome do filme.`
+    `.﹒୨<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji> 𝗥𝗢𝗗𝗗𝗗 ${boldNum(roundIndex + 1)}\n\n` +
+    `<i>${round.synopsis}</i>\n\n` +
+    `ıl 𓏴ᩙᡴ﹒Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>\n\n` +
+    `Rodada ${roundIndex + 1} de ${SINOPSE_ROUNDS.length} · Pontos: ${score}`
   );
 }
 

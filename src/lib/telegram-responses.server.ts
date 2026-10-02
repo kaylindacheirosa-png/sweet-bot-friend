@@ -20,6 +20,7 @@ export const FIXED_RESPONSES: FixedResponse[] = [
       "/start — Iniciar a conversa",
       "/ajuda — Ver esta lista",
       "/quiz — Jogar o quiz de perguntas 🎮",
+      "/game_sinopse — Adivinhe o filme pela sinopse 🍿",
       "/horario — Ver horário de atendimento",
       "/contato — Falar com a equipe",
       "",

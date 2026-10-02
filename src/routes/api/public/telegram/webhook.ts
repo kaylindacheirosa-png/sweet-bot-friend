@@ -7,6 +7,13 @@ import {
   buildResultMessage,
   buildFinalMessage,
 } from "@/lib/telegram-quiz.server";
+import {
+  SINOPSE_ROUNDS,
+  buildSinopseRound,
+  parseSinopseState,
+  evaluateSinopse,
+  buildSinopseFinal,
+} from "@/lib/telegram-sinopse.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 
@@ -26,10 +33,13 @@ async function sendTelegramMessage(
   chatId: number,
   text: string,
   keyboard?: { text: string; callback_data: string }[][],
+  forceReply?: boolean,
 ): Promise<void> {
   const body: Record<string, unknown> = { chat_id: chatId, text, parse_mode: "HTML" };
   if (keyboard) {
     body["reply_markup"] = { inline_keyboard: keyboard };
+  } else if (forceReply) {
+    body["reply_markup"] = { force_reply: true, input_field_placeholder: "Nome do filme..." };
   }
 
   const response = await fetch(`${GATEWAY_URL}/sendMessage`, {
@@ -139,7 +149,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true, ignored: true });
         }
 
-        const firstWord = text.trim().toLowerCase().split("@")[0];
+        const firstWord = text.trim().toLowerCase().split(/[@\s]/)[0];
 
         // /quiz inicia o jogo
         if (firstWord === "/quiz") {
@@ -149,6 +159,34 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             `🎮 <b>Vamos jogar!</b> São ${QUIZ_QUESTIONS.length} perguntas. Toque na resposta certa:\n\n${first.text}`,
             first.keyboard,
           );
+          return Response.json({ ok: true });
+        }
+
+        // /game_sinopse inicia o jogo de adivinhar pela sinopse
+        if (firstWord === "/game_sinopse") {
+          await sendTelegramMessage(
+            chatId,
+            `🍿 <b>Adivinhe o filme pela sinopse!</b> São ${SINOPSE_ROUNDS.length} rodadas.\n\n${buildSinopseRound(0, 0)}`,
+            undefined,
+            true,
+          );
+          return Response.json({ ok: true });
+        }
+
+        // Resposta do usuário a uma rodada do game_sinopse
+        const sinopseState = parseSinopseState(message.reply_to_message?.text);
+        if (sinopseState && message.reply_to_message?.from?.is_bot) {
+          const r = evaluateSinopse(sinopseState.roundIndex, sinopseState.score, text);
+          if (r.isLast) {
+            await sendTelegramMessage(chatId, `${r.feedback}\n\n${buildSinopseFinal(r.newScore)}`);
+          } else {
+            await sendTelegramMessage(
+              chatId,
+              `${r.feedback}\n\n${buildSinopseRound(sinopseState.roundIndex + 1, r.newScore)}`,
+              undefined,
+              true,
+            );
+          }
           return Response.json({ ok: true });
         }
 

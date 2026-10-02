@@ -166,7 +166,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if (firstWord === "/game_sinopse") {
           await sendTelegramMessage(
             chatId,
-            `🍿 <b>Adivinhe o filme pela sinopse!</b> São ${SINOPSE_ROUNDS.length} rodadas.\n\n${buildSinopseRound(0, 0)}`,
+            `🍿 <b>Adivinhe pelo comando!</b> São ${SINOPSE_ROUNDS.length} rodadas.\n\n${buildSinopseRound(0, 0)}`,
             undefined,
             true,
           );

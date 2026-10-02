@@ -37,7 +37,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
 
 // callback_data: "quiz:<perguntaAtual>:<opcaoEscolhida>:<acertos>"
 export function buildQuestionMessage(questionIndex: number, score: number) {
-  const q = QUIZ_QUESTIONS[questionIndex];
+  const q = QUIZ_QUESTIONS[questionIndex]!;
   const text = [
     `🎯 <b>Pergunta ${questionIndex + 1} de ${QUIZ_QUESTIONS.length}</b>`,
     "",
@@ -56,7 +56,7 @@ export function buildResultMessage(
   chosenIndex: number,
   score: number,
 ): { text: string; newScore: number; isLast: boolean } {
-  const q = QUIZ_QUESTIONS[questionIndex];
+  const q = QUIZ_QUESTIONS[questionIndex]!;
   const correct = chosenIndex === q.correctIndex;
   const newScore = correct ? score + 1 : score;
   const isLast = questionIndex === QUIZ_QUESTIONS.length - 1;

@@ -186,7 +186,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // /game_sinopse inicia o jogo de adivinhar pela sinopse
         if (firstWord === "/game_sinopse") {
-          // Envia a introdução e espera 10 segundos antes de começar o jogo
+          // Envia a imagem, a introdução e espera 10 segundos antes de começar o jogo
+          await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL);
           await sendTelegramMessage(chatId, SINOPSE_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           await sendTelegramMessage(

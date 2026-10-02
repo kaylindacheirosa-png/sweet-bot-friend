@@ -16,6 +16,7 @@ import {
 } from "@/lib/telegram-sinopse.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
+const SINOPSE_IMAGE_URL = "https://i.imgur.com/WSx9VxL.jpeg";
 
 // Mensagem de introdução do /game_sinopse (com emoji premium)
 const SINOPSE_INTRO_MESSAGE =
@@ -59,6 +60,23 @@ async function sendTelegramMessage(
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`Telegram sendMessage failed [${response.status}]: ${errorBody}`);
+  }
+}
+
+async function sendTelegramPhoto(chatId: number, photoUrl: string): Promise<void> {
+  const response = await fetch(`${GATEWAY_URL}/sendPhoto`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
+      "X-Connection-Api-Key": process.env["TELEGRAM_API_KEY"] ?? "",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ chat_id: chatId, photo: photoUrl }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`Telegram sendPhoto failed [${response.status}]: ${errorBody}`);
   }
 }
 

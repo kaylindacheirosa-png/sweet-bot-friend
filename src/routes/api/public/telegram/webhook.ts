@@ -29,7 +29,7 @@ async function sendTelegramMessage(
 ): Promise<void> {
   const body: Record<string, unknown> = { chat_id: chatId, text, parse_mode: "HTML" };
   if (keyboard) {
-    body.reply_markup = { inline_keyboard: keyboard };
+    body["reply_markup"] = { inline_keyboard: keyboard };
   }
 
   const response = await fetch(`${GATEWAY_URL}/sendMessage`, {

@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const telegramApiKey = process.env.TELEGRAM_API_KEY;
+        const telegramApiKey = process.env["TELEGRAM_API_KEY"];
         if (!telegramApiKey) {
           console.error("TELEGRAM_API_KEY is not configured");
           return Response.json({ ok: false }, { status: 500 });

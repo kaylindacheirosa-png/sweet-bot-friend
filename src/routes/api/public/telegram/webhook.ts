@@ -65,6 +65,7 @@ async function sendTelegramMessage(
   return json.result?.message_id ?? null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any> {
   const response = await fetch(`${GATEWAY_URL}/${method}`, {
     method: "POST",
@@ -235,6 +236,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return new Response("Unauthorized", { status: 401 });
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let update: any;
         try {
           update = await request.json();

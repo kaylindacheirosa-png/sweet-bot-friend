@@ -8,11 +8,13 @@ import {
   buildFinalMessage,
 } from "@/lib/telegram-quiz.server";
 import {
-  SINOPSE_ROUNDS,
   buildSinopseRound,
   parseSinopseState,
-  evaluateSinopse,
+  applyGuess,
+  skipRound,
+  buildCorrectMessage,
   buildSinopseFinal,
+  type SinopseState,
 } from "@/lib/telegram-sinopse.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
@@ -39,7 +41,7 @@ async function sendTelegramMessage(
   text: string,
   keyboard?: { text: string; callback_data: string }[][],
   forceReply?: boolean,
-): Promise<void> {
+): Promise<number | null> {
   const body: Record<string, unknown> = { chat_id: chatId, text, parse_mode: "HTML" };
   if (keyboard) {
     body["reply_markup"] = { inline_keyboard: keyboard };
@@ -60,7 +62,52 @@ async function sendTelegramMessage(
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`Telegram sendMessage failed [${response.status}]: ${errorBody}`);
+    return null;
   }
+  const json = (await response.json()) as { result?: { message_id?: number } };
+  return json.result?.message_id ?? null;
+}
+
+async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any> {
+  const response = await fetch(`${GATEWAY_URL}/${method}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
+      "X-Connection-Api-Key": process.env["TELEGRAM_API_KEY"] ?? "",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    console.error(`Telegram ${method} failed [${response.status}]: ${await response.text()}`);
+    return null;
+  }
+  return ((await response.json()) as { result?: unknown }).result ?? null;
+}
+
+// Evita que dois acertos simultâneos contem duas vezes a mesma rodada (melhor esforço, por instância).
+const handledRounds = new Set<string>();
+
+/** Lê o jogo ativo a partir da mensagem da rodada fixada no chat. */
+async function getActiveSinopse(
+  chatId: number,
+): Promise<{ state: SinopseState; pinnedId: number } | null> {
+  const chat = await callTelegram("getChat", { chat_id: chatId });
+  const pinned = chat?.pinned_message;
+  if (!pinned?.from?.is_bot) return null;
+  const state = parseSinopseState(pinned.text, pinned.entities);
+  return state ? { state, pinnedId: pinned.message_id } : null;
+}
+
+/** Manda a rodada e fixa a mensagem (ela guarda rodada e placar). */
+async function postSinopseRound(chatId: number, state: SinopseState, prefix = ""): Promise<void> {
+  const id = await sendTelegramMessage(chatId, prefix + buildSinopseRound(state));
+  if (id) await callTelegram("pinChatMessage", { chat_id: chatId, message_id: id, disable_notification: true });
+}
+
+async function finishSinopse(chatId: number, pinnedId: number, state: SinopseState, prefix = ""): Promise<void> {
+  await callTelegram("unpinChatMessage", { chat_id: chatId, message_id: pinnedId });
+  await sendTelegramMessage(chatId, prefix + buildSinopseFinal(state.players));
 }
 
 async function sendTelegramPhoto(chatId: number, photoUrl: string, caption?: string): Promise<void> {
@@ -220,30 +267,42 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           // Envia a imagem com a introdução na legenda e espera 10 segundos antes de começar o jogo
           await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL, SINOPSE_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
-          await sendTelegramMessage(
-            chatId,
-            buildSinopseRound(0, 0),
-            undefined,
-            true,
-          );
+          await postSinopseRound(chatId, { roundIndex: 0, players: [] });
           return Response.json({ ok: true });
         }
 
-        // Resposta do usuário a uma rodada do game_sinopse
-        const sinopseState = parseSinopseState(message.reply_to_message?.text);
-        if (sinopseState && message.reply_to_message?.from?.is_bot) {
-          const r = evaluateSinopse(sinopseState.roundIndex, sinopseState.score, text);
-          if (r.isLast) {
-            await sendTelegramMessage(chatId, `${r.feedback}\n\n${buildSinopseFinal(r.newScore)}`);
+        // /pular_rodada e /parar_sinopse controlam o jogo ativo
+        if (firstWord === "/pular_rodada" || firstWord === "/parar_sinopse") {
+          const active = await getActiveSinopse(chatId);
+          if (!active) {
+            await sendTelegramMessage(chatId, "Nenhum /game_sinopse ativo neste chat.");
+          } else if (firstWord === "/parar_sinopse") {
+            await finishSinopse(chatId, active.pinnedId, active.state);
           } else {
-            await sendTelegramMessage(
-              chatId,
-              `${r.feedback}\n\n${buildSinopseRound(sinopseState.roundIndex + 1, r.newScore)}`,
-              undefined,
-              true,
-            );
+            const r = skipRound(active.state);
+            if (r.finished) await finishSinopse(chatId, active.pinnedId, r.state, "⏭️ Rodada pulada.\n\n");
+            else await postSinopseRound(chatId, r.state, "⏭️ Rodada pulada.\n\n");
           }
           return Response.json({ ok: true });
+        }
+
+        // Mensagem normal no chat: se houver rodada ativa, é um palpite (sem precisar responder à mensagem)
+        if (!text.trim().startsWith("/")) {
+          const active = await getActiveSinopse(chatId);
+          if (active) {
+            const from = message.from;
+            if (!from || from.is_bot) return Response.json({ ok: true });
+            const name = [from.first_name, from.last_name].filter(Boolean).join(" ") || from.username || "Participante";
+            const r = applyGuess(active.state, { id: from.id, name }, text);
+            if (!r.correct) return Response.json({ ok: true }); // erro: ignora em silêncio
+            const key = `${chatId}:${active.pinnedId}`;
+            if (handledRounds.has(key)) return Response.json({ ok: true });
+            handledRounds.add(key);
+            const prefix = `${buildCorrectMessage(name, r.display)}\n\n`;
+            if (r.finished) await finishSinopse(chatId, active.pinnedId, r.state, prefix);
+            else await postSinopseRound(chatId, r.state, prefix);
+            return Response.json({ ok: true });
+          }
         }
 
         // /start always gets the welcome message

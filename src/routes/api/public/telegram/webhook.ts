@@ -21,13 +21,10 @@ const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 const SINOPSE_IMAGE_URL = "https://i.imgur.com/WSx9VxL.jpeg";
 
 // Mensagem de introdução do /game_sinopse (com emoji premium)
-const SINOPSE_INTRO_MESSAGE =
-  `𖼥﹒<tg-emoji emoji-id="5444896024445352143">💋</tg-emoji>﹒⦙⦙𑊁᷼ <tg-emoji emoji-id="5003645910681388672">💋</tg-emoji>OGO DA <tg-emoji emoji-id="5003544549453202818">📎</tg-emoji>INOPSE <tg-emoji emoji-id="4981007597625673295">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5447328517828148260">💬</tg-emoji>﹒Neste jogo, iremos mandar sinopses de determinadas obras de boys love. Sua missão será identificar corretamente de qual obra estamos falando. . ⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5429392313493242588">💗</tg-emoji>﹑<tg-emoji emoji-id="5413656137436270977">💜</tg-emoji>oa <tg-emoji emoji-id="5411517200773186685">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5445068445907449682">🍀</tg-emoji>`;
+const SINOPSE_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5444896024445352143">💋</tg-emoji>﹒⦙⦙𑊁᷼ <tg-emoji emoji-id="5003645910681388672">💋</tg-emoji>OGO DA <tg-emoji emoji-id="5003544549453202818">📎</tg-emoji>INOPSE <tg-emoji emoji-id="4981007597625673295">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5447328517828148260">💬</tg-emoji>﹒Neste jogo, iremos mandar sinopses de determinadas obras de boys love. Sua missão será identificar corretamente de qual obra estamos falando. . ⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5429392313493242588">💗</tg-emoji>﹑<tg-emoji emoji-id="5413656137436270977">💜</tg-emoji>oa <tg-emoji emoji-id="5411517200773186685">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5445068445907449682">🍀</tg-emoji>`;
 
 function deriveWebhookSecret(telegramApiKey: string): string {
-  return createHash("sha256")
-    .update(`telegram-webhook:${telegramApiKey}`)
-    .digest("base64url");
+  return createHash("sha256").update(`telegram-webhook:${telegramApiKey}`).digest("base64url");
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -68,7 +65,7 @@ async function sendTelegramMessage(
   return json.result?.message_id ?? null;
 }
 
-async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any {
+async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any> {
   const response = await fetch(`${GATEWAY_URL}/${method}`, {
     method: "POST",
     headers: {
@@ -102,15 +99,29 @@ async function getActiveSinopse(
 /** Manda a rodada e fixa a mensagem (ela guarda rodada e placar). */
 async function postSinopseRound(chatId: number, state: SinopseState, prefix = ""): Promise<void> {
   const id = await sendTelegramMessage(chatId, prefix + buildSinopseRound(state));
-  if (id) await callTelegram("pinChatMessage", { chat_id: chatId, message_id: id, disable_notification: true });
+  if (id)
+    await callTelegram("pinChatMessage", {
+      chat_id: chatId,
+      message_id: id,
+      disable_notification: true,
+    });
 }
 
-async function finishSinopse(chatId: number, pinnedId: number, state: SinopseState, prefix = ""): Promise<void> {
+async function finishSinopse(
+  chatId: number,
+  pinnedId: number,
+  state: SinopseState,
+  prefix = "",
+): Promise<void> {
   await callTelegram("unpinChatMessage", { chat_id: chatId, message_id: pinnedId });
   await sendTelegramMessage(chatId, prefix + buildSinopseFinal(state.players));
 }
 
-async function sendTelegramPhoto(chatId: number, photoUrl: string, caption?: string): Promise<void> {
+async function sendTelegramPhoto(
+  chatId: number,
+  photoUrl: string,
+  caption?: string,
+): Promise<void> {
   const body: Record<string, unknown> = { chat_id: chatId, photo: photoUrl };
   if (caption) {
     body["caption"] = caption;
@@ -135,7 +146,11 @@ async function sendTelegramPhoto(chatId: number, photoUrl: string, caption?: str
       const img = await fetch(photoUrl);
       const form = new FormData();
       form.append("chat_id", String(chatId));
-      form.append("photo", new Blob([await img.arrayBuffer()], { type: "image/jpeg" }), "imagem.jpg");
+      form.append(
+        "photo",
+        new Blob([await img.arrayBuffer()], { type: "image/jpeg" }),
+        "imagem.jpg",
+      );
       if (caption) {
         form.append("caption", caption);
         form.append("parse_mode", "HTML");
@@ -196,10 +211,7 @@ async function handleQuizCallback(
   await answerCallbackQuery(callbackQueryId);
 
   if (result.isLast) {
-    await sendTelegramMessage(
-      chatId,
-      `${result.text}\n\n${buildFinalMessage(result.newScore)}`,
-    );
+    await sendTelegramMessage(chatId, `${result.text}\n\n${buildFinalMessage(result.newScore)}`);
   } else {
     const next = buildQuestionMessage(questionIndex + 1, result.newScore);
     await sendTelegramMessage(chatId, `${result.text}\n\n${next.text}`, next.keyboard);
@@ -280,7 +292,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             await finishSinopse(chatId, active.pinnedId, active.state);
           } else {
             const r = skipRound(active.state);
-            if (r.finished) await finishSinopse(chatId, active.pinnedId, r.state, "⏭️ Rodada pulada.\n\n");
+            if (r.finished)
+              await finishSinopse(chatId, active.pinnedId, r.state, "⏭️ Rodada pulada.\n\n");
             else await postSinopseRound(chatId, r.state, "⏭️ Rodada pulada.\n\n");
           }
           return Response.json({ ok: true });
@@ -292,7 +305,10 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           if (active) {
             const from = message.from;
             if (!from || from.is_bot) return Response.json({ ok: true });
-            const name = [from.first_name, from.last_name].filter(Boolean).join(" ") || from.username || "Participante";
+            const name =
+              [from.first_name, from.last_name].filter(Boolean).join(" ") ||
+              from.username ||
+              "Participante";
             const r = applyGuess(active.state, { id: from.id, name }, text);
             if (!r.correct) return Response.json({ ok: true }); // erro: ignora em silêncio
             const key = `${chatId}:${active.pinnedId}`;

@@ -81,9 +81,10 @@ function scoreboardHtml(players: Player[]): string {
 
 export function buildSinopseRound(state: SinopseState): string {
   const round = SINOPSE_ROUNDS[state.roundIndex]!;
-  const pending = round.answers.length === 0
-    ? `\n\n⚠️ Esta rodada ainda não tem resposta cadastrada. Use /pular_rodada para seguir.`
-    : "";
+  const pending =
+    round.answers.length === 0
+      ? `\n\n⚠️ Esta rodada ainda não tem resposta cadastrada. Use /pular_rodada para seguir.`
+      : "";
   return (
     `.﹒୨<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji> 𝗥𝗢𝗗𝗔𝗗𝗔 ${boldNum(state.roundIndex + 1)}\n\n` +
     `<i>${round.synopsis}</i>\n\n` +
@@ -135,8 +136,7 @@ export function parseSinopseState(
 }
 
 export type GuessResult =
-  | { correct: false }
-  | { correct: true; state: SinopseState; finished: boolean; display: string };
+  { correct: false } | { correct: true; state: SinopseState; finished: boolean; display: string };
 
 /** Primeiro acerto da rodada: +1 ponto para quem acertou e avança a rodada. Erro: nada muda. */
 export function applyGuess(
@@ -160,7 +160,10 @@ export function applyGuess(
 
 export function skipRound(state: SinopseState): { state: SinopseState; finished: boolean } {
   const next = state.roundIndex + 1;
-  return { state: { roundIndex: next, players: state.players }, finished: next >= SINOPSE_ROUNDS.length };
+  return {
+    state: { roundIndex: next, players: state.players },
+    finished: next >= SINOPSE_ROUNDS.length,
+  };
 }
 
 export function buildCorrectMessage(name: string, display: string): string {
@@ -171,7 +174,10 @@ export function buildSinopseFinal(players: Player[]): string {
   const ranking = [...players].sort((a, b) => b.points - a.points);
   const medals = ["🥇", "🥈", "🥉"];
   const lines = ranking.length
-    ? ranking.map((p, i) => `${medals[i] ?? "▫️"} ${escapeHtml(p.name)} — ${p.points} ponto${p.points === 1 ? "" : "s"}`)
+    ? ranking.map(
+        (p, i) =>
+          `${medals[i] ?? "▫️"} ${escapeHtml(p.name)} — ${p.points} ponto${p.points === 1 ? "" : "s"}`,
+      )
     : ["Ninguém pontuou desta vez."];
   return `🏁 <b>Fim de jogo!</b>\n\n<b>Pontuação final:</b>\n${lines.join("\n")}\n\nJogue de novo com /game_sinopse`;
 }

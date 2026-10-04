@@ -68,7 +68,7 @@ async function sendTelegramMessage(
   return json.result?.message_id ?? null;
 }
 
-async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any> {
+async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any> // eslint-disable-line @typescript-eslint/no-explicit-any {
   const response = await fetch(`${GATEWAY_URL}/${method}`, {
     method: "POST",
     headers: {

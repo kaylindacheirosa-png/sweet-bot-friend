@@ -33,18 +33,29 @@ describe("game_sinopse", () => {
   });
 
   it("erro não muda o estado", () => {
-    expect(applyGuess({ roundIndex: 0, players: [] }, { id: 1, name: "Ana" }, "outra")).toEqual({ correct: false });
+    expect(applyGuess({ roundIndex: 0, players: [] }, { id: 1, name: "Ana" }, "outra")).toEqual({
+      correct: false,
+    });
   });
 
   it("acerto dá +1 ao participante e avança a rodada", () => {
     const r = applyGuess(
-      { roundIndex: 0, players: [{ id: 1, name: "Ana", points: 2 }, { id: 2, name: "Bia", points: 1 }] },
+      {
+        roundIndex: 0,
+        players: [
+          { id: 1, name: "Ana", points: 2 },
+          { id: 2, name: "Bia", points: 1 },
+        ],
+      },
       { id: 2, name: "Bia" },
       "alpha trauma",
     );
     expect(r.correct && r.state).toEqual({
       roundIndex: 1,
-      players: [{ id: 1, name: "Ana", points: 2 }, { id: 2, name: "Bia", points: 2 }],
+      players: [
+        { id: 1, name: "Ana", points: 2 },
+        { id: 2, name: "Bia", points: 2 },
+      ],
     });
   });
 
@@ -76,7 +87,10 @@ describe("game_sinopse", () => {
     ]);
     expect(state).toEqual({
       roundIndex: 4,
-      players: [{ id: 7, name: "Ana", points: 3 }, { id: 8, name: "Bia", points: 1 }],
+      players: [
+        { id: 7, name: "Ana", points: 3 },
+        { id: 8, name: "Bia", points: 1 },
+      ],
     });
   });
 
@@ -85,7 +99,10 @@ describe("game_sinopse", () => {
   });
 
   it("placar final ordena por pontos", () => {
-    const f = buildSinopseFinal([{ id: 1, name: "Ana", points: 1 }, { id: 2, name: "Bia", points: 3 }]);
+    const f = buildSinopseFinal([
+      { id: 1, name: "Ana", points: 1 },
+      { id: 2, name: "Bia", points: 3 },
+    ]);
     expect(f.indexOf("Bia")).toBeLessThan(f.indexOf("Ana"));
   });
 });

@@ -14,6 +14,7 @@ import {
   skipRound,
   buildCorrectMessage,
   buildSinopseFinal,
+  mergeParticipants,
   type SinopseState,
 } from "@/lib/telegram-sinopse.server";
 
@@ -85,6 +86,14 @@ async function callTelegram(method: string, payload: Record<string, unknown>): P
 
 // Evita que dois acertos simultâneos contem duas vezes a mesma rodada (melhor esforço, por instância).
 const handledRounds = new Set<string>();
+// Participantes que erraram (melhor esforço, em memória) — entram no placar final com 0 pontos.
+const roundParticipants = new Map<string, { id: number; name: string; username?: string }[]>();
+function withParticipants(chatId: number, pinnedId: number, state: SinopseState): SinopseState {
+  const key = `${chatId}:${pinnedId}`;
+  const list = roundParticipants.get(key) ?? [];
+  roundParticipants.delete(key);
+  return mergeParticipants(state, list);
+}
 
 /** Lê o jogo ativo a partir da mensagem da rodada fixada no chat. */
 async function getActiveSinopse(
@@ -291,9 +300,9 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           if (!active) {
             await sendTelegramMessage(chatId, "Nenhum /game_sinopse ativo neste chat.");
           } else if (firstWord === "/parar_sinopse") {
-            await finishSinopse(chatId, active.pinnedId, active.state);
+            await finishSinopse(chatId, active.pinnedId, withParticipants(chatId, active.pinnedId, active.state));
           } else {
-            const r = skipRound(active.state);
+            const r = skipRound(withParticipants(chatId, active.pinnedId, active.state));
             if (r.finished)
               await finishSinopse(chatId, active.pinnedId, r.state, "⏭️ Rodada pulada.\n\n");
             else await postSinopseRound(chatId, r.state, "⏭️ Rodada pulada.\n\n");
@@ -311,11 +320,21 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               [from.first_name, from.last_name].filter(Boolean).join(" ") ||
               from.username ||
               "Participante";
-            const r = applyGuess(active.state, { id: from.id, name }, text);
-            if (!r.correct) return Response.json({ ok: true }); // erro: ignora em silêncio
+            const user = { id: from.id, name, ...(from.username ? { username: from.username } : {}) };
             const key = `${chatId}:${active.pinnedId}`;
+            const r = applyGuess(active.state, user, text);
+            if (!r.correct) {
+              // erro: nenhuma saída; só lembra o participante para o placar final
+              const list = roundParticipants.get(key) ?? [];
+              if (!list.some((u) => u.id === user.id)) list.push(user);
+              roundParticipants.set(key, list);
+              return Response.json({ ok: true });
+            }
             if (handledRounds.has(key)) return Response.json({ ok: true });
             handledRounds.add(key);
+            const others = roundParticipants.get(key) ?? [];
+            roundParticipants.delete(key);
+            r.state = mergeParticipants(r.state, others);
             const prefix = `${buildCorrectMessage(name, r.display)}\n\n`;
             if (r.finished) await finishSinopse(chatId, active.pinnedId, r.state, prefix);
             else await postSinopseRound(chatId, r.state, prefix);

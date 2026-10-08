@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  SINOPSE_ROUNDS, isCorrectAnswer, applyGuess, parseSinopseState, buildSinopseRound,
-  buildSinopseFinal, skipRound, mergeParticipants,
+  SINOPSE_ROUNDS,
+  isCorrectAnswer,
+  applyGuess,
+  parseSinopseState,
+  buildSinopseRound,
+  buildSinopseFinal,
+  skipRound,
+  mergeParticipants,
 } from "@/lib/telegram-sinopse.server";
 
 describe("game_sinopse", () => {
@@ -18,7 +24,10 @@ describe("game_sinopse", () => {
   });
   it("acerto dá +1 e avança", () => {
     const r = applyGuess({ roundIndex: 0, players: [] }, { id: 9, name: "Caio" }, "aplha trauma");
-    expect(r.correct && r.state).toEqual({ roundIndex: 1, players: [{ id: 9, name: "Caio", points: 1 }] });
+    expect(r.correct && r.state).toEqual({
+      roundIndex: 1,
+      players: [{ id: 9, name: "Caio", points: 1 }],
+    });
   });
   it("mensagem da rodada sem placar e sem 'Digite a resposta'", () => {
     const html = buildSinopseRound({ roundIndex: 0, players: [{ id: 7, name: "Ana", points: 3 }] });
@@ -29,7 +38,9 @@ describe("game_sinopse", () => {
   it("estado escondido é lido de volta", () => {
     const state = { roundIndex: 4, players: [{ id: 7, name: "Ana", username: "ana", points: 3 }] };
     const url = buildSinopseRound(state).match(/href="([^"]+)"/)![1]!;
-    expect(parseSinopseState("x", [{ type: "text_link", offset: 0, length: 1, url }])).toEqual(state);
+    expect(parseSinopseState("x", [{ type: "text_link", offset: 0, length: 1, url }])).toEqual(
+      state,
+    );
   });
   it("placar final com cabeçalho e medalhas", () => {
     const f = buildSinopseFinal([
@@ -50,5 +61,6 @@ describe("game_sinopse", () => {
     expect(s.players).toHaveLength(1);
     expect((f.match(/ಲ/g) ?? []).length).toBe(1);
   });
-  it("última rodada termina", () => expect(skipRound({ roundIndex: 12, players: [] }).finished).toBe(true));
+  it("última rodada termina", () =>
+    expect(skipRound({ roundIndex: 12, players: [] }).finished).toBe(true));
 });

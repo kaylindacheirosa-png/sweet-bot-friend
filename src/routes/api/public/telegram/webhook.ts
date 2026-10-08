@@ -300,7 +300,11 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           if (!active) {
             await sendTelegramMessage(chatId, "Nenhum /game_sinopse ativo neste chat.");
           } else if (firstWord === "/parar_sinopse") {
-            await finishSinopse(chatId, active.pinnedId, withParticipants(chatId, active.pinnedId, active.state));
+            await finishSinopse(
+              chatId,
+              active.pinnedId,
+              withParticipants(chatId, active.pinnedId, active.state),
+            );
           } else {
             const r = skipRound(withParticipants(chatId, active.pinnedId, active.state));
             if (r.finished)
@@ -320,7 +324,11 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               [from.first_name, from.last_name].filter(Boolean).join(" ") ||
               from.username ||
               "Participante";
-            const user = { id: from.id, name, ...(from.username ? { username: from.username } : {}) };
+            const user = {
+              id: from.id,
+              name,
+              ...(from.username ? { username: from.username } : {}),
+            };
             const key = `${chatId}:${active.pinnedId}`;
             const r = applyGuess(active.state, user, text);
             if (!r.correct) {

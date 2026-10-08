@@ -54,7 +54,11 @@ export function isCorrectAnswer(roundIndex: number, guess: string): boolean {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 const BOLD_DIGITS = ["𝟬", "𝟭", "𝟮", "𝟯", "𝟰", "𝟱", "𝟲", "𝟳", "𝟴", "𝟵"];
@@ -140,8 +144,7 @@ export function mergeParticipants(
 }
 
 export type GuessResult =
-  | { correct: false }
-  | { correct: true; state: SinopseState; finished: boolean; display: string };
+  { correct: false } | { correct: true; state: SinopseState; finished: boolean; display: string };
 
 export function applyGuess(
   state: SinopseState,

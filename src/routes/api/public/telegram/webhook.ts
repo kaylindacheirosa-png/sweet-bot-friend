@@ -312,7 +312,6 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             else await postSinopseRound(chatId, r.state);
             return Response.json({ ok: true });
           }
-          return Response.json({ ok: true });
         }
 
         // /start always gets the welcome message

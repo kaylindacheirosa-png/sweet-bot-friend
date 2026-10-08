@@ -9,7 +9,7 @@ import {
 } from "@/lib/telegram-quiz.server";
 import {
   buildSinopseRound,
-  parseSinopseState,
+  newGame,
   applyGuess,
   skipRound,
   buildCorrectMessage,
@@ -84,47 +84,20 @@ async function callTelegram(method: string, payload: Record<string, unknown>): P
   return ((await response.json()) as { result?: unknown }).result ?? null;
 }
 
-// Evita que dois acertos simultâneos contem duas vezes a mesma rodada (melhor esforço, por instância).
-const handledRounds = new Set<string>();
-// Participantes que erraram (melhor esforço, em memória) — entram no placar final com 0 pontos.
-const roundParticipants = new Map<string, { id: number; name: string; username?: string }[]>();
-function withParticipants(chatId: number, pinnedId: number, state: SinopseState): SinopseState {
-  const key = `${chatId}:${pinnedId}`;
-  const list = roundParticipants.get(key) ?? [];
-  roundParticipants.delete(key);
-  return mergeParticipants(state, list);
+// Jogo ativo por chat (memória do servidor, sem banco de dados).
+const activeGames = new Map<number, SinopseState>();
+const wrongGuessers = new Map<number, { id: number; name: string; username?: string }[]>();
+
+async function postSinopseRound(chatId: number, state: SinopseState): Promise<void> {
+  activeGames.set(chatId, state);
+  await sendTelegramMessage(chatId, buildSinopseRound(state));
 }
 
-/** Lê o jogo ativo a partir da mensagem da rodada fixada no chat. */
-async function getActiveSinopse(
-  chatId: number,
-): Promise<{ state: SinopseState; pinnedId: number } | null> {
-  const chat = await callTelegram("getChat", { chat_id: chatId });
-  const pinned = chat?.pinned_message;
-  if (!pinned?.from?.is_bot) return null;
-  const state = parseSinopseState(pinned.text, pinned.entities);
-  return state ? { state, pinnedId: pinned.message_id } : null;
-}
-
-/** Manda a rodada e fixa a mensagem (ela guarda rodada e placar). */
-async function postSinopseRound(chatId: number, state: SinopseState, prefix = ""): Promise<void> {
-  const id = await sendTelegramMessage(chatId, prefix + buildSinopseRound(state));
-  if (id)
-    await callTelegram("pinChatMessage", {
-      chat_id: chatId,
-      message_id: id,
-      disable_notification: true,
-    });
-}
-
-async function finishSinopse(
-  chatId: number,
-  pinnedId: number,
-  state: SinopseState,
-  prefix = "",
-): Promise<void> {
-  await callTelegram("unpinChatMessage", { chat_id: chatId, message_id: pinnedId });
-  await sendTelegramMessage(chatId, prefix + buildSinopseFinal(state.players));
+async function finishSinopse(chatId: number, state: SinopseState): Promise<void> {
+  activeGames.delete(chatId);
+  const final = mergeParticipants(state, wrongGuessers.get(chatId) ?? []);
+  wrongGuessers.delete(chatId);
+  await sendTelegramMessage(chatId, buildSinopseFinal(final.players));
 }
 
 async function sendTelegramPhoto(
@@ -290,33 +263,32 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           // Envia a imagem com a introdução na legenda e espera 10 segundos antes de começar o jogo
           await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL, SINOPSE_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
-          await postSinopseRound(chatId, { roundIndex: 0, players: [] });
+          wrongGuessers.delete(chatId);
+          const game = newGame();
+          if (game.order.length === 0) {
+            await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
+          } else await postSinopseRound(chatId, game);
           return Response.json({ ok: true });
         }
 
         // /pular_rodada e /parar_sinopse controlam o jogo ativo
         if (firstWord === "/pular_rodada" || firstWord === "/parar_sinopse") {
-          const active = await getActiveSinopse(chatId);
+          const active = activeGames.get(chatId);
           if (!active) {
             await sendTelegramMessage(chatId, "Nenhum /game_sinopse ativo neste chat.");
           } else if (firstWord === "/parar_sinopse") {
-            await finishSinopse(
-              chatId,
-              active.pinnedId,
-              withParticipants(chatId, active.pinnedId, active.state),
-            );
+            await finishSinopse(chatId, active);
           } else {
-            const r = skipRound(withParticipants(chatId, active.pinnedId, active.state));
-            if (r.finished)
-              await finishSinopse(chatId, active.pinnedId, r.state, "⏭️ Rodada pulada.\n\n");
-            else await postSinopseRound(chatId, r.state, "⏭️ Rodada pulada.\n\n");
+            const r = skipRound(active);
+            if (r.finished) await finishSinopse(chatId, r.state);
+            else await postSinopseRound(chatId, r.state);
           }
           return Response.json({ ok: true });
         }
 
-        // Mensagem normal no chat: se houver rodada ativa, é um palpite (sem precisar responder à mensagem)
+        // Mensagem normal: se houver jogo ativo, é um palpite (erros ficam em silêncio)
         if (!text.trim().startsWith("/")) {
-          const active = await getActiveSinopse(chatId);
+          const active = activeGames.get(chatId);
           if (active) {
             const from = message.from;
             if (!from || from.is_bot) return Response.json({ ok: true });
@@ -324,30 +296,23 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               [from.first_name, from.last_name].filter(Boolean).join(" ") ||
               from.username ||
               "Participante";
-            const user = {
-              id: from.id,
-              name,
-              ...(from.username ? { username: from.username } : {}),
-            };
-            const key = `${chatId}:${active.pinnedId}`;
-            const r = applyGuess(active.state, user, text);
+            const user = { id: from.id, name, ...(from.username ? { username: from.username } : {}) };
+            const r = applyGuess(active, user, text);
             if (!r.correct) {
-              // erro: nenhuma saída; só lembra o participante para o placar final
-              const list = roundParticipants.get(key) ?? [];
+              const list = wrongGuessers.get(chatId) ?? [];
               if (!list.some((u) => u.id === user.id)) list.push(user);
-              roundParticipants.set(key, list);
+              wrongGuessers.set(chatId, list);
               return Response.json({ ok: true });
             }
-            if (handledRounds.has(key)) return Response.json({ ok: true });
-            handledRounds.add(key);
-            const others = roundParticipants.get(key) ?? [];
-            roundParticipants.delete(key);
-            r.state = mergeParticipants(r.state, others);
-            const prefix = `${buildCorrectMessage(name, r.display)}\n\n`;
-            if (r.finished) await finishSinopse(chatId, active.pinnedId, r.state, prefix);
-            else await postSinopseRound(chatId, r.state, prefix);
+            // Avança já, para um segundo acerto simultâneo não contar de novo
+            if (r.finished) activeGames.delete(chatId);
+            else activeGames.set(chatId, r.state);
+            await sendTelegramMessage(chatId, buildCorrectMessage(name, r.display));
+            if (r.finished) await finishSinopse(chatId, r.state);
+            else await postSinopseRound(chatId, r.state);
             return Response.json({ ok: true });
           }
+          return Response.json({ ok: true });
         }
 
         // /start always gets the welcome message

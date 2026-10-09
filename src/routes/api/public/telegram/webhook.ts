@@ -15,7 +15,10 @@ import {
   buildCorrectMessage,
   buildSinopseFinal,
   mergeParticipants,
+  normalize,
   setExtraRounds,
+  toRounds,
+  currentRound,
   type SinopseState,
 } from "@/lib/telegram-sinopse.server";
 
@@ -28,17 +31,28 @@ async function db() {
   return supabaseAdmin;
 }
 
-async function loadExtraRounds(): Promise<void> {
+async function loadRounds(game: "sinopse" | "peitoral") {
   const { data, error } = await (await db())
     .from("sinopse_rounds")
-    .select("synopsis, answer")
+    .select("synopsis, answer, photo_file_id")
+    .eq("game", game)
     .order("created_at");
   if (error) console.error("load rounds failed", error);
-  else setExtraRounds(data ?? []);
+  return data ?? [];
+}
+
+async function loadExtraRounds(): Promise<void> {
+  setExtraRounds(await loadRounds("sinopse"));
 }
 
 /** Fluxo do /add (só a dona). Retorna true se tratou a mensagem. */
-async function handleAddFlow(chatId: number, userId: number, text: string, firstWord: string) {
+async function handleAddFlow(
+  chatId: number,
+  userId: number,
+  text: string,
+  firstWord: string,
+  photo?: string,
+) {
   if (userId !== OWNER_ID) return firstWord === "/add"; // ignora outros
   const sb = await db();
   if (firstWord === "/cancelar") {
@@ -50,35 +64,67 @@ async function handleAddFlow(chatId: number, userId: number, text: string, first
     return false;
   }
   if (firstWord === "/add") {
-    await sb.from("bot_add_sessions").upsert({ user_id: userId, step: "synopsis", synopsis: null });
-    await sendTelegramMessage(chatId, "📝 Qual é a sinopse? (ou /cancelar)");
+    await sb
+      .from("bot_add_sessions")
+      .upsert({ user_id: userId, step: "game", synopsis: null, game: null });
+    await sendTelegramMessage(
+      chatId,
+      "🎮 Em qual comando você quer adicionar a rodada?\n\n1 — /game_sinopse\n2 — /game_peitoral\n\n(ou /cancelar)",
+    );
     return true;
   }
-  if (text.trim().startsWith("/")) return false;
+  if (text.trim().startsWith("/") && !["/game_sinopse", "/game_peitoral"].includes(firstWord)) return false;
   const { data: session } = await sb
     .from("bot_add_sessions")
-    .select("step, synopsis")
+    .select("step, synopsis, game")
     .eq("user_id", userId)
     .maybeSingle();
   if (!session) return false;
-  if (session.step === "synopsis") {
-    await sb.from("bot_add_sessions").update({ step: "answer", synopsis: text.trim() }).eq("user_id", userId);
-    await sendTelegramMessage(chatId, "✅ Sinopse anotada! Agora, qual é a resposta?");
+  const t = text.trim();
+  if (session.step === "game") {
+    const g = normalize(t);
+    const game = g === "1" || g.includes("sinopse") ? "sinopse" : g === "2" || g.includes("peitoral") ? "peitoral" : null;
+    if (!game) {
+      await sendTelegramMessage(chatId, "Responda 1 (/game_sinopse) ou 2 (/game_peitoral).");
+      return true;
+    }
+    await sb.from("bot_add_sessions").update({ step: "synopsis", game }).eq("user_id", userId);
+    await sendTelegramMessage(
+      chatId,
+      game === "peitoral"
+        ? "🖼️ Mande a imagem da rodada (pode ter legenda) ou um texto. (ou /cancelar)"
+        : "📝 Qual é a sinopse? (ou /cancelar)",
+    );
     return true;
   }
-  const { error } = await sb
-    .from("sinopse_rounds")
-    .insert({ synopsis: session.synopsis ?? "", answer: text.trim() });
+  if (t.startsWith("/")) return false;
+  if (session.step === "synopsis") {
+    await sb.from("bot_add_sessions").update({ step: "answer", synopsis: photo ? `photo:${photo}\n${t}` : t }).eq("user_id", userId);
+    await sendTelegramMessage(chatId, "✅ Anotado! Agora, qual é a resposta?");
+    return true;
+  }
+  if (!t) return true;
+  let synopsis = session.synopsis ?? "";
+  let photo_file_id: string | null = null;
+  if (synopsis.startsWith("photo:")) {
+    const nl = synopsis.indexOf("\n");
+    photo_file_id = synopsis.slice(6, nl);
+    synopsis = synopsis.slice(nl + 1);
+  }
+  const game = session.game ?? "sinopse";
+  const { error } = await sb.from("sinopse_rounds").insert({ synopsis, answer: t, game, photo_file_id });
   await sb.from("bot_add_sessions").delete().eq("user_id", userId);
   await sendTelegramMessage(
     chatId,
-    error ? "⚠️ Não consegui salvar. Tente /add de novo." : "🎉 Rodada salva! Ela já entra no /game_sinopse.",
+    error ? "⚠️ Não consegui salvar. Tente /add de novo." : `🎉 Rodada salva! Ela já entra no /game_${game}.`,
   );
   return true;
 }
 
 // Mensagem de introdução do /game_sinopse (com emoji premium)
 const SINOPSE_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5444896024445352143">💋</tg-emoji>﹒⦙⦙𑊁᷼ <tg-emoji emoji-id="5003645910681388672">💋</tg-emoji>OGO DA <tg-emoji emoji-id="5003544549453202818">📎</tg-emoji>INOPSE <tg-emoji emoji-id="4981007597625673295">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5447328517828148260">💬</tg-emoji>﹒Neste jogo, iremos mandar sinopses de determinadas obras de boys love. Sua missão será identificar corretamente de qual obra estamos falando. . ⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5429392313493242588">💗</tg-emoji>﹑<tg-emoji emoji-id="5413656137436270977">💜</tg-emoji>oa <tg-emoji emoji-id="5411517200773186685">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5445068445907449682">🍀</tg-emoji>`;
+
+const PEITORAL_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5240004588114829391">✨</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5082316568944182103">💋</tg-emoji>OGO DO <tg-emoji emoji-id="5134415857979491173">📎</tg-emoji>EITOTAL <tg-emoji emoji-id="6042107490332579591">🙃</tg-emoji> ゙౿\n\n\n\n＞ <tg-emoji emoji-id="5890739983689455462">💬</tg-emoji>﹒Neste jogo, sua missão é descobrir de quem são os incríveis, majestosos e suculentos (ou não) seios. ﹒⢷⌒𑁯\n\n﹒★﹑Sua reposta vale ao nome do personagem e da obra.﹗﹒\n\n\n\n﹒﹒<tg-emoji emoji-id="6042001219956775130">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5260339961181275846">🍀</tg-emoji>`;
 
 function deriveWebhookSecret(telegramApiKey: string): string {
   return createHash("sha256").update(`telegram-webhook:${telegramApiKey}`).digest("base64url");
@@ -146,7 +192,9 @@ const wrongGuessers = new Map<number, { id: number; name: string; username?: str
 
 async function postSinopseRound(chatId: number, state: SinopseState): Promise<void> {
   activeGames.set(chatId, state);
-  await sendTelegramMessage(chatId, buildSinopseRound(state));
+  const photo = currentRound(state).photo;
+  if (photo) await sendTelegramPhoto(chatId, photo, buildSinopseRound(state));
+  else await sendTelegramMessage(chatId, buildSinopseRound(state));
 }
 
 async function finishSinopse(chatId: number, state: SinopseState): Promise<void> {
@@ -294,7 +342,10 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         const message = update.message ?? update.edited_message;
         const chatId = message?.chat?.id;
-        const text = message?.text;
+        const photoId: string | undefined = Array.isArray(message?.photo)
+          ? message.photo[message.photo.length - 1]?.file_id
+          : undefined;
+        const text: unknown = message?.text ?? (photoId ? (message?.caption ?? "") : undefined);
 
         if (typeof chatId !== "number" || typeof text !== "string") {
           // Stickers, photos, etc. — nothing to answer with fixed replies
@@ -305,7 +356,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // /add só no privado
         if (message.chat?.type === "private" && typeof message.from?.id === "number") {
-          if (await handleAddFlow(chatId, message.from.id, text, firstWord)) {
+          if (await handleAddFlow(chatId, message.from.id, text, firstWord, photoId)) {
             return Response.json({ ok: true });
           }
         }
@@ -335,6 +386,18 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
+        // /game_peitoral: mesmo jogo, com rodadas próprias
+        if (firstWord === "/game_peitoral") {
+          await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL, PEITORAL_INTRO_MESSAGE);
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
+          wrongGuessers.delete(chatId);
+          const game = newGame(Math.random, toRounds(await loadRounds("peitoral")));
+          if (game.order.length === 0) {
+            await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
+          } else await postSinopseRound(chatId, game);
+          return Response.json({ ok: true });
+        }
+
         // /pular_rodada e /parar_sinopse controlam o jogo ativo
         if (firstWord === "/pular_rodada" || firstWord === "/parar_sinopse") {
           const active = activeGames.get(chatId);
@@ -351,6 +414,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         }
 
         // Mensagem normal: se houver jogo ativo, é um palpite (erros ficam em silêncio)
+        if (photoId && !message.text) return Response.json({ ok: true, ignored: true });
         if (!text.trim().startsWith("/")) {
           const active = activeGames.get(chatId);
           if (active) {

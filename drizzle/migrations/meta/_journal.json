@@ -8,6 +8,13 @@
       "when": 1791504045415,
       "tag": "0000_sinopse_rounds",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791549155156,
+      "tag": "0001_add_game_column",
+      "breakpoints": true
     }
   ]
 }

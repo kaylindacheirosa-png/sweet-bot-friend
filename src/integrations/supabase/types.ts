@@ -16,18 +16,21 @@ export type Database = {
     Tables: {
       bot_add_sessions: {
         Row: {
+          game: string | null
           step: string
           synopsis: string | null
           updated_at: string
           user_id: number
         }
         Insert: {
+          game?: string | null
           step: string
           synopsis?: string | null
           updated_at?: string
           user_id: number
         }
         Update: {
+          game?: string | null
           step?: string
           synopsis?: string | null
           updated_at?: string
@@ -39,19 +42,25 @@ export type Database = {
         Row: {
           answer: string
           created_at: string
+          game: string
           id: string
+          photo_file_id: string | null
           synopsis: string
         }
         Insert: {
           answer: string
           created_at?: string
+          game?: string
           id?: string
+          photo_file_id?: string | null
           synopsis: string
         }
         Update: {
           answer?: string
           created_at?: string
+          game?: string
           id?: string
+          photo_file_id?: string | null
           synopsis?: string
         }
         Relationships: []

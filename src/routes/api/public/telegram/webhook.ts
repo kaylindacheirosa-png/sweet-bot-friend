@@ -15,11 +15,67 @@ import {
   buildCorrectMessage,
   buildSinopseFinal,
   mergeParticipants,
+  setExtraRounds,
   type SinopseState,
 } from "@/lib/telegram-sinopse.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 const SINOPSE_IMAGE_URL = "https://i.imgur.com/WSx9VxL.jpeg";
+const OWNER_ID = 6733728637;
+
+async function db() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
+
+async function loadExtraRounds(): Promise<void> {
+  const { data, error } = await (await db())
+    .from("sinopse_rounds")
+    .select("synopsis, answer")
+    .order("created_at");
+  if (error) console.error("load rounds failed", error);
+  else setExtraRounds(data ?? []);
+}
+
+/** Fluxo do /add (só a dona). Retorna true se tratou a mensagem. */
+async function handleAddFlow(chatId: number, userId: number, text: string, firstWord: string) {
+  if (userId !== OWNER_ID) return firstWord === "/add"; // ignora outros
+  const sb = await db();
+  if (firstWord === "/cancelar") {
+    const { data } = await sb.from("bot_add_sessions").delete().eq("user_id", userId).select();
+    if (data?.length) {
+      await sendTelegramMessage(chatId, "❌ Adição cancelada.");
+      return true;
+    }
+    return false;
+  }
+  if (firstWord === "/add") {
+    await sb.from("bot_add_sessions").upsert({ user_id: userId, step: "synopsis", synopsis: null });
+    await sendTelegramMessage(chatId, "📝 Qual é a sinopse? (ou /cancelar)");
+    return true;
+  }
+  if (text.trim().startsWith("/")) return false;
+  const { data: session } = await sb
+    .from("bot_add_sessions")
+    .select("step, synopsis")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!session) return false;
+  if (session.step === "synopsis") {
+    await sb.from("bot_add_sessions").update({ step: "answer", synopsis: text.trim() }).eq("user_id", userId);
+    await sendTelegramMessage(chatId, "✅ Sinopse anotada! Agora, qual é a resposta?");
+    return true;
+  }
+  const { error } = await sb
+    .from("sinopse_rounds")
+    .insert({ synopsis: session.synopsis ?? "", answer: text.trim() });
+  await sb.from("bot_add_sessions").delete().eq("user_id", userId);
+  await sendTelegramMessage(
+    chatId,
+    error ? "⚠️ Não consegui salvar. Tente /add de novo." : "🎉 Rodada salva! Ela já entra no /game_sinopse.",
+  );
+  return true;
+}
 
 // Mensagem de introdução do /game_sinopse (com emoji premium)
 const SINOPSE_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5444896024445352143">💋</tg-emoji>﹒⦙⦙𑊁᷼ <tg-emoji emoji-id="5003645910681388672">💋</tg-emoji>OGO DA <tg-emoji emoji-id="5003544549453202818">📎</tg-emoji>INOPSE <tg-emoji emoji-id="4981007597625673295">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5447328517828148260">💬</tg-emoji>﹒Neste jogo, iremos mandar sinopses de determinadas obras de boys love. Sua missão será identificar corretamente de qual obra estamos falando. . ⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5429392313493242588">💗</tg-emoji>﹑<tg-emoji emoji-id="5413656137436270977">💜</tg-emoji>oa <tg-emoji emoji-id="5411517200773186685">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5445068445907449682">🍀</tg-emoji>`;
@@ -245,7 +301,14 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true, ignored: true });
         }
 
-        const firstWord = text.trim().toLowerCase().split(/[@\s]/)[0];
+        const firstWord = text.trim().toLowerCase().split(/[@\s]/)[0] ?? "";
+
+        // /add só no privado
+        if (message.chat?.type === "private" && typeof message.from?.id === "number") {
+          if (await handleAddFlow(chatId, message.from.id, text, firstWord)) {
+            return Response.json({ ok: true });
+          }
+        }
 
         // /quiz inicia o jogo
         if (firstWord === "/quiz") {
@@ -264,6 +327,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL, SINOPSE_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           wrongGuessers.delete(chatId);
+          await loadExtraRounds();
           const game = newGame();
           if (game.order.length === 0) {
             await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");

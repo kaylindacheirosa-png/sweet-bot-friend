@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bot_add_sessions: {
+        Row: {
+          step: string
+          synopsis: string | null
+          updated_at: string
+          user_id: number
+        }
+        Insert: {
+          step: string
+          synopsis?: string | null
+          updated_at?: string
+          user_id: number
+        }
+        Update: {
+          step?: string
+          synopsis?: string | null
+          updated_at?: string
+          user_id?: number
+        }
+        Relationships: []
+      }
+      sinopse_rounds: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          synopsis: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          synopsis: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          synopsis?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

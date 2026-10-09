@@ -6,6 +6,8 @@ export interface SinopseRound {
   synopsis: string;
   answers: string[];
   display: string;
+  /** file_id de foto do Telegram (rodadas com imagem). */
+  photo?: string;
 }
 
 export interface Player {
@@ -21,6 +23,24 @@ export interface SinopseState {
   /** Posição atual dentro de `order`. */
   position: number;
   players: Player[];
+  /** Rodadas deste jogo (padrão: SINOPSE_ROUNDS). */
+  rounds?: SinopseRound[];
+}
+
+function roundsOf(state: SinopseState): SinopseRound[] {
+  return state.rounds ?? SINOPSE_ROUNDS;
+}
+
+/** Converte linhas salvas em rodadas. */
+export function toRounds(
+  extra: { synopsis: string; answer: string; photo_file_id?: string | null }[],
+): SinopseRound[] {
+  return extra.map((r) => ({
+    synopsis: r.synopsis ? `"${escapeHtml(r.synopsis)}"` : "",
+    answers: [r.answer],
+    display: r.answer,
+    ...(r.photo_file_id ? { photo: r.photo_file_id } : {}),
+  }));
 }
 
 export const MAX_ROUNDS = 13;
@@ -79,13 +99,20 @@ function boldNum(n: number): string {
 }
 
 /** Sorteia até MAX_ROUNDS rodadas (só as que têm resposta). */
-export function newGame(random: () => number = Math.random): SinopseState {
-  const pool = SINOPSE_ROUNDS.map((r, i) => (r.answers.length ? i : -1)).filter((i) => i >= 0);
+export function newGame(
+  random: () => number = Math.random,
+  rounds?: SinopseRound[],
+): SinopseState {
+  const pool = (rounds ?? SINOPSE_ROUNDS).map((r, i) => (r.answers.length ? i : -1)).filter((i) => i >= 0);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
-  return { order: pool.slice(0, MAX_ROUNDS), position: 0, players: [] };
+  return { order: pool.slice(0, MAX_ROUNDS), position: 0, players: [], ...(rounds ? { rounds } : {}) };
+}
+
+export function currentRound(state: SinopseState): SinopseRound {
+  return roundsOf(state)[currentRoundIndex(state)]!;
 }
 
 export function currentRoundIndex(state: SinopseState): number {
@@ -93,10 +120,10 @@ export function currentRoundIndex(state: SinopseState): number {
 }
 
 export function buildSinopseRound(state: SinopseState): string {
-  const round = SINOPSE_ROUNDS[currentRoundIndex(state)]!;
+  const round = roundsOf(state)[currentRoundIndex(state)]!;
   return (
     `.﹒୨<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji> 𝗥𝗢𝗗𝗔𝗗𝗔 ${boldNum(state.position + 1)}\n\n` +
-    `<i>${round.synopsis}</i>\n\n` +
+    (round.synopsis ? `<i>${round.synopsis}</i>\n\n` : "") +
     `ıl 𓏴ᩙᡴ﹒Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>`
   );
 }
@@ -126,7 +153,9 @@ export function applyGuess(
   guess: string,
 ): GuessResult {
   const idx = currentRoundIndex(state);
-  if (!isCorrectAnswer(idx, guess)) return { correct: false };
+  const round = roundsOf(state)[idx];
+  const g = normalize(guess);
+  if (!round || !g || !round.answers.some((a) => normalize(a) === g)) return { correct: false };
   const merged = mergeParticipants(state, [user]);
   merged.players.find((p) => p.id === user.id)!.points += 1;
   const next = state.position + 1;
@@ -134,7 +163,7 @@ export function applyGuess(
     correct: true,
     state: { ...merged, position: next },
     finished: next >= state.order.length,
-    display: SINOPSE_ROUNDS[idx]!.display,
+    display: round.display,
   };
 }
 

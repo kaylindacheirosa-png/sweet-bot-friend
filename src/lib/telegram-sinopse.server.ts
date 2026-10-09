@@ -34,6 +34,21 @@ export const SINOPSE_ROUNDS: SinopseRound[] = [
   },
 ];
 
+const BASE_ROUND_COUNT = SINOPSE_ROUNDS.length;
+
+/** Junta as rodadas fixas com as adicionadas pelo /add. */
+export function setExtraRounds(extra: { synopsis: string; answer: string }[]): void {
+  SINOPSE_ROUNDS.splice(
+    BASE_ROUND_COUNT,
+    SINOPSE_ROUNDS.length - BASE_ROUND_COUNT,
+    ...extra.map((r) => ({
+      synopsis: `"${escapeHtml(r.synopsis)}"`,
+      answers: [r.answer],
+      display: r.answer,
+    })),
+  );
+}
+
 export function normalize(s: string): string {
   return s
     .normalize("NFD")

@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791504045415,
+      "tag": "0000_sinopse_rounds",
+      "breakpoints": true
+    }
+  ]
 }

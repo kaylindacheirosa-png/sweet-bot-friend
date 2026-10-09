@@ -21,6 +21,7 @@ export const FIXED_RESPONSES: FixedResponse[] = [
       "/ajuda — Ver esta lista",
       "/quiz — Jogar o quiz de perguntas 🎮",
       "/game_sinopse — Adivinhe a obra pela sinopse 🍿",
+      "/game_peitoral — Descubra de quem é o peitoral 👀",
       "/pular_rodada — Pular a rodada atual do game_sinopse",
       "/parar_sinopse — Encerrar o game_sinopse e ver o placar",
       "/horario — Ver horário de atendimento",

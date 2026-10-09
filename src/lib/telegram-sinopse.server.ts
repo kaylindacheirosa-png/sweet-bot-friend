@@ -124,7 +124,7 @@ export function buildSinopseRound(state: SinopseState): string {
   return (
     `.﹒୨<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji> 𝗥𝗢𝗗𝗔𝗗𝗔 ${boldNum(state.position + 1)}\n\n` +
     (round.synopsis ? `<i>${round.synopsis}</i>\n\n` : "") +
-    `ıl 𓏴ᩙᡴ﹒Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>`
+    `ıl 𓏴ᩙᡴ﹒${state.rounds ? "De quem é esse peitoral??" : "Que obra é essa??"} ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>`
   );
 }
 

@@ -301,7 +301,14 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true, ignored: true });
         }
 
-        const firstWord = text.trim().toLowerCase().split(/[@\s]/)[0];
+        const firstWord = text.trim().toLowerCase().split(/[@\s]/)[0] ?? "";
+
+        // /add só no privado
+        if (message.chat?.type === "private" && typeof message.from?.id === "number") {
+          if (await handleAddFlow(chatId, message.from.id, text, firstWord)) {
+            return Response.json({ ok: true });
+          }
+        }
 
         // /quiz inicia o jogo
         if (firstWord === "/quiz") {
@@ -320,6 +327,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL, SINOPSE_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           wrongGuessers.delete(chatId);
+          await loadExtraRounds();
           const game = newGame();
           if (game.order.length === 0) {
             await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");

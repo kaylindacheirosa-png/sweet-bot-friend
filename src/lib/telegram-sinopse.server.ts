@@ -80,7 +80,10 @@ export function normalize(s: string): string {
 
 /** A barra separa alternativas completas, não partes de uma mesma resposta. */
 export function parseAnswers(answer: string): string[] {
-  return answer.split("/").map((part) => part.trim()).filter(Boolean);
+  return answer
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 export function isCorrectAnswer(roundIndex: number, guess: string): boolean {
@@ -92,7 +95,11 @@ export function isCorrectAnswer(roundIndex: number, guess: string): boolean {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 const BOLD_DIGITS = ["𝟬", "𝟭", "𝟮", "𝟯", "𝟰", "𝟱", "𝟲", "𝟳", "𝟴", "𝟵"];
@@ -104,16 +111,20 @@ function boldNum(n: number): string {
 }
 
 /** Sorteia até MAX_ROUNDS rodadas (só as que têm resposta). */
-export function newGame(
-  random: () => number = Math.random,
-  rounds?: SinopseRound[],
-): SinopseState {
-  const pool = (rounds ?? SINOPSE_ROUNDS).map((r, i) => (r.answers.length ? i : -1)).filter((i) => i >= 0);
+export function newGame(random: () => number = Math.random, rounds?: SinopseRound[]): SinopseState {
+  const pool = (rounds ?? SINOPSE_ROUNDS)
+    .map((r, i) => (r.answers.length ? i : -1))
+    .filter((i) => i >= 0);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [pool[i], pool[j]] = [pool[j]!, pool[i]!];
   }
-  return { order: pool.slice(0, MAX_ROUNDS), position: 0, players: [], ...(rounds ? { rounds } : {}) };
+  return {
+    order: pool.slice(0, MAX_ROUNDS),
+    position: 0,
+    players: [],
+    ...(rounds ? { rounds } : {}),
+  };
 }
 
 export function currentRound(state: SinopseState): SinopseRound {
@@ -156,8 +167,7 @@ export function mergeParticipants(
 }
 
 export type GuessResult =
-  | { correct: false }
-  | { correct: true; state: SinopseState; finished: boolean; display: string };
+  { correct: false } | { correct: true; state: SinopseState; finished: boolean; display: string };
 
 export function applyGuess(
   state: SinopseState,

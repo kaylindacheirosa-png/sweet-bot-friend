@@ -33,7 +33,9 @@ async function db() {
 }
 
 async function loadRounds(game: "sinopse" | "peitoral") {
-  const { data, error } = await (await db())
+  const { data, error } = await (
+    await db()
+  )
     .from("sinopse_rounds")
     .select("synopsis, answer, photo_file_id")
     .eq("game", game)
@@ -74,7 +76,8 @@ async function handleAddFlow(
     );
     return true;
   }
-  if (text.trim().startsWith("/") && !["/game_sinopse", "/game_peitoral"].includes(firstWord)) return false;
+  if (text.trim().startsWith("/") && !["/game_sinopse", "/game_peitoral"].includes(firstWord))
+    return false;
   const { data: session } = await sb
     .from("bot_add_sessions")
     .select("step, synopsis, game")
@@ -84,7 +87,12 @@ async function handleAddFlow(
   const t = text.trim();
   if (session.step === "game") {
     const g = normalize(t);
-    const game = g === "1" || g.includes("sinopse") ? "sinopse" : g === "2" || g.includes("peitoral") ? "peitoral" : null;
+    const game =
+      g === "1" || g.includes("sinopse")
+        ? "sinopse"
+        : g === "2" || g.includes("peitoral")
+          ? "peitoral"
+          : null;
     if (!game) {
       await sendTelegramMessage(chatId, "Responda 1 (/game_sinopse) ou 2 (/game_peitoral).");
       return true;
@@ -100,8 +108,14 @@ async function handleAddFlow(
   }
   if (t.startsWith("/")) return false;
   if (session.step === "synopsis") {
-    await sb.from("bot_add_sessions").update({ step: "answer", synopsis: photo ? `photo:${photo}\n${t}` : t }).eq("user_id", userId);
-    await sendTelegramMessage(chatId, "✅ Anotado! Agora, qual é a resposta? Para aceitar alternativas, separe com / (ex.: Carro/Vela).");
+    await sb
+      .from("bot_add_sessions")
+      .update({ step: "answer", synopsis: photo ? `photo:${photo}\n${t}` : t })
+      .eq("user_id", userId);
+    await sendTelegramMessage(
+      chatId,
+      "✅ Anotado! Agora, qual é a resposta? Para aceitar alternativas, separe com / (ex.: Carro/Vela).",
+    );
     return true;
   }
   if (!t) return true;
@@ -113,11 +127,15 @@ async function handleAddFlow(
     synopsis = synopsis.slice(nl + 1);
   }
   const game = session.game ?? "sinopse";
-  const { error } = await sb.from("sinopse_rounds").insert({ synopsis, answer: t, game, photo_file_id });
+  const { error } = await sb
+    .from("sinopse_rounds")
+    .insert({ synopsis, answer: t, game, photo_file_id });
   await sb.from("bot_add_sessions").delete().eq("user_id", userId);
   await sendTelegramMessage(
     chatId,
-    error ? "⚠️ Não consegui salvar. Tente /add de novo." : `🎉 Rodada salva! Ela já entra no /game_${game}.`,
+    error
+      ? "⚠️ Não consegui salvar. Tente /add de novo."
+      : `🎉 Rodada salva! Ela já entra no /game_${game}.`,
   );
   return true;
 }
@@ -425,7 +443,11 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               [from.first_name, from.last_name].filter(Boolean).join(" ") ||
               from.username ||
               "Participante";
-            const user = { id: from.id, name, ...(from.username ? { username: from.username } : {}) };
+            const user = {
+              id: from.id,
+              name,
+              ...(from.username ? { username: from.username } : {}),
+            };
             const r = applyGuess(active, user, text);
             if (!r.correct) {
               const list = wrongGuessers.get(chatId) ?? [];

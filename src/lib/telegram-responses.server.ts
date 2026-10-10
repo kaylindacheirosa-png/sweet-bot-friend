@@ -37,6 +37,39 @@ export const FIXED_RESPONSES: FixedResponse[] = [
   },
 ];
 
+type Keyboard = { text: string; callback_data: string }[][];
+
+const BACK: Keyboard = [[{ text: "⬅️ Voltar", callback_data: "settings:menu" }]];
+
+const SETTINGS_PAGES: Record<string, { text: string; keyboard: Keyboard }> = {
+  menu: {
+    text: "⚙️ <b>Configurações</b>\n\nEscolha uma opção abaixo:",
+    keyboard: [
+      [{ text: "🎮 Jogos", callback_data: "settings:jogos" }],
+      [{ text: "🕹️ Controles do jogo", callback_data: "settings:controles" }],
+      [
+        { text: "🕛 Horário", callback_data: "settings:horario" },
+        { text: "📬 Contato", callback_data: "settings:contato" },
+      ],
+    ],
+  },
+  jogos: {
+    text: "🎮 <b>Jogos</b>\n\n/quiz — Quiz de perguntas\n/game_sinopse — Adivinhe a obra pela sinopse 🍿\n/game_peitoral — Descubra de quem é o peitoral 👀",
+    keyboard: BACK,
+  },
+  controles: {
+    text: "🕹️ <b>Controles do jogo</b>\n\n/pular_rodada — Pular a rodada atual\n/parar_sinopse — Encerrar o jogo e ver o placar",
+    keyboard: BACK,
+  },
+  horario: { text: "🕛 Atendemos de segunda a sexta, das 9h às 18h.", keyboard: BACK },
+  contato: { text: "📬 Fale com a equipe pelo e-mail: contato@exemplo.com", keyboard: BACK },
+};
+
+/** Página do /settings; páginas desconhecidas voltam ao menu. */
+export function buildSettingsPage(page: string) {
+  return SETTINGS_PAGES[page] ?? SETTINGS_PAGES["menu"]!;
+}
+
 export function findReply(text: string): string | null {
   const normalized = text.trim().toLowerCase();
 

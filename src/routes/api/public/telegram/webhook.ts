@@ -24,7 +24,7 @@ import {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 const SINOPSE_IMAGE_URL = "https://i.imgur.com/WSx9VxL.jpeg";
-const PEITORAL_IMAGE_URL = "https://i.imgur.com/teKb3Ud.jpeg";
+const PEITORAL_IMAGE_URL = "https://i.imgur.com/JNoWEA8.jpeg";
 const OWNER_ID = 6733728637;
 
 async function db() {

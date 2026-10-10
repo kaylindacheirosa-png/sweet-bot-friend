@@ -24,6 +24,7 @@ import {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
 const SINOPSE_IMAGE_URL = "https://i.imgur.com/WSx9VxL.jpeg";
+const PEITORAL_IMAGE_URL = "https://i.imgur.com/teKb3Ud.jpeg";
 const OWNER_ID = 6733728637;
 
 async function db() {
@@ -124,7 +125,7 @@ async function handleAddFlow(
 // Mensagem de introdução do /game_sinopse (com emoji premium)
 const SINOPSE_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5444896024445352143">💋</tg-emoji>﹒⦙⦙𑊁᷼ <tg-emoji emoji-id="5003645910681388672">💋</tg-emoji>OGO DA <tg-emoji emoji-id="5003544549453202818">📎</tg-emoji>INOPSE <tg-emoji emoji-id="4981007597625673295">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5447328517828148260">💬</tg-emoji>﹒Neste jogo, iremos mandar sinopses de determinadas obras de boys love. Sua missão será identificar corretamente de qual obra estamos falando. . ⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5429392313493242588">💗</tg-emoji>﹑<tg-emoji emoji-id="5413656137436270977">💜</tg-emoji>oa <tg-emoji emoji-id="5411517200773186685">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5445068445907449682">🍀</tg-emoji>`;
 
-const PEITORAL_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5240004588114829391">✨</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5082316568944182103">💋</tg-emoji>OGO DO <tg-emoji emoji-id="5134415857979491173">📎</tg-emoji>EITOTAL <tg-emoji emoji-id="6042107490332579591">🙃</tg-emoji> ゙౿\n\n\n\n＞ <tg-emoji emoji-id="5890739983689455462">💬</tg-emoji>﹒Neste jogo, sua missão é descobrir de quem são os incríveis, majestosos e suculentos (ou não) seios. ﹒⢷⌒𑁯\n\n﹒★﹑Sua reposta vale ao nome do personagem e da obra.﹗﹒\n\n\n\n﹒﹒<tg-emoji emoji-id="6042001219956775130">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5260339961181275846">🍀</tg-emoji>`;
+const PEITORAL_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5240004588114829391">✨</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5082316568944182103">💋</tg-emoji>OGO DO <tg-emoji emoji-id="5134415857979491173">📎</tg-emoji>EITOTAL <tg-emoji emoji-id="6042107490332579591">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5890739983689455462">💬</tg-emoji>﹒Neste jogo, sua missão é descobrir de quem são os incríveis, majestosos e suculentos (ou não) seios. ﹒⢷⌒𑁯\n\n﹒★﹑Sua reposta vale ao nome do personagem e da obra.﹗﹒\n\n﹒﹒<tg-emoji emoji-id="6042001219956775130">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5260339961181275846">🍀</tg-emoji>`;
 
 function deriveWebhookSecret(telegramApiKey: string): string {
   return createHash("sha256").update(`telegram-webhook:${telegramApiKey}`).digest("base64url");

@@ -14,6 +14,7 @@ describe("respostas fixas do Telegram", () => {
   it("comandos fixos existentes continuam disponíveis", () => {
     expect(findReply("/horario")).not.toBeNull();
     expect(findReply("/contato")).not.toBeNull();
+  });
 });
 
 describe("página inicial do /settings", () => {

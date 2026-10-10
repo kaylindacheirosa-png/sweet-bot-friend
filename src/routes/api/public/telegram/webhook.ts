@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHash, timingSafeEqual } from "crypto";
-import { findReply, WELCOME_MESSAGE } from "@/lib/telegram-responses.server";
+import { findReply, buildSettingsPage, WELCOME_MESSAGE } from "@/lib/telegram-responses.server";
 import {
   QUIZ_QUESTIONS,
   buildQuestionMessage,
@@ -351,6 +351,21 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // Clique em botão do quiz
         const callbackQuery = update.callback_query;
+        if (callbackQuery?.data?.startsWith("settings:")) {
+          const msg = callbackQuery.message;
+          await answerCallbackQuery(callbackQuery.id);
+          if (typeof msg?.chat?.id === "number") {
+            const page = buildSettingsPage(callbackQuery.data.slice(9));
+            await callTelegram("editMessageText", {
+              chat_id: msg.chat.id,
+              message_id: msg.message_id,
+              text: page.text,
+              parse_mode: "HTML",
+              reply_markup: { inline_keyboard: page.keyboard },
+            });
+          }
+          return Response.json({ ok: true });
+        }
         if (callbackQuery?.data?.startsWith("quiz:")) {
           const cbChatId = callbackQuery.message?.chat?.id;
           if (typeof cbChatId === "number") {
@@ -378,6 +393,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           if (await handleAddFlow(chatId, message.from.id, text, firstWord, photoId)) {
             return Response.json({ ok: true });
           }
+        }
+
+        // /settings (e /ajuda) abre o menu com botões
+        if (["/settings", "/ajuda", "/help"].includes(firstWord)) {
+          const page = buildSettingsPage("menu");
+          await sendTelegramMessage(chatId, page.text, page.keyboard);
+          return Response.json({ ok: true });
         }
 
         // /quiz inicia o jogo

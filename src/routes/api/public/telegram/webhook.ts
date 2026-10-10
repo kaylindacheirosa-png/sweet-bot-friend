@@ -101,7 +101,7 @@ async function handleAddFlow(
   if (t.startsWith("/")) return false;
   if (session.step === "synopsis") {
     await sb.from("bot_add_sessions").update({ step: "answer", synopsis: photo ? `photo:${photo}\n${t}` : t }).eq("user_id", userId);
-    await sendTelegramMessage(chatId, "✅ Anotado! Agora, qual é a resposta?");
+    await sendTelegramMessage(chatId, "✅ Anotado! Agora, qual é a resposta? Para aceitar alternativas, separe com / (ex.: Carro/Vela).");
     return true;
   }
   if (!t) return true;
@@ -446,7 +446,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         // /start always gets the welcome message
         const answer = firstWord === "/start" ? WELCOME_MESSAGE : findReply(text);
 
-        await sendTelegramMessage(chatId, answer);
+        if (answer !== null) await sendTelegramMessage(chatId, answer);
 
         // Always 200 so Telegram doesn't retry the same update forever
         return Response.json({ ok: true });

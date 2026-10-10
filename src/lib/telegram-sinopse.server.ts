@@ -37,7 +37,7 @@ export function toRounds(
 ): SinopseRound[] {
   return extra.map((r) => ({
     synopsis: r.synopsis ? `"${escapeHtml(r.synopsis)}"` : "",
-    answers: [r.answer],
+    answers: parseAnswers(r.answer),
     display: r.answer,
     ...(r.photo_file_id ? { photo: r.photo_file_id } : {}),
   }));
@@ -63,7 +63,7 @@ export function setExtraRounds(extra: { synopsis: string; answer: string }[]): v
     SINOPSE_ROUNDS.length - BASE_ROUND_COUNT,
     ...extra.map((r) => ({
       synopsis: `"${escapeHtml(r.synopsis)}"`,
-      answers: [r.answer],
+      answers: parseAnswers(r.answer),
       display: r.answer,
     })),
   );
@@ -76,6 +76,11 @@ export function normalize(s: string): string {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** A barra separa alternativas completas, não partes de uma mesma resposta. */
+export function parseAnswers(answer: string): string[] {
+  return answer.split("/").map((part) => part.trim()).filter(Boolean);
 }
 
 export function isCorrectAnswer(roundIndex: number, guess: string): boolean {
@@ -120,11 +125,18 @@ export function currentRoundIndex(state: SinopseState): number {
 }
 
 export function buildSinopseRound(state: SinopseState): string {
-  const round = roundsOf(state)[currentRoundIndex(state)]!;
+  const round = currentRound(state);
+  const peitoral = Boolean(state.rounds);
+  const titleEmoji = peitoral
+    ? '<tg-emoji emoji-id="5343648776101845769">💗</tg-emoji>'
+    : '<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji>';
+  const question = peitoral
+    ? 'Que personagem ou obra é esses seios suculentos? <tg-emoji emoji-id="6042098256152894179">💭</tg-emoji>ᰍ﹒'
+    : 'Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>';
   return (
-    `.﹒୨<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji> 𝗥𝗢𝗗𝗔𝗗𝗔 ${boldNum(state.position + 1)}\n\n` +
+    `.﹒୨${titleEmoji} 𝗥𝗢𝗗𝗔𝗗𝗔 ${boldNum(state.position + 1)}\n\n` +
     (round.synopsis ? `<i>${round.synopsis}</i>\n\n` : "") +
-    `ıl 𓏴ᩙᡴ﹒${state.rounds ? "De quem é esse peitoral??" : "Que obra é essa??"} ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>`
+    `ıl 𓏴ᩙᡴ﹒${question}`
   );
 }
 

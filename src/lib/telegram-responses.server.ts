@@ -8,9 +8,6 @@ export interface FixedResponse {
 
 export const WELCOME_MESSAGE = "👋 Olá! Eu sou o bot. Digite /ajuda para ver o que posso fazer.";
 
-export const FALLBACK_MESSAGE =
-  "🤖 Não entendi essa mensagem.\nDigite /ajuda para ver os comandos disponíveis.";
-
 export const FIXED_RESPONSES: FixedResponse[] = [
   {
     triggers: ["/ajuda", "/help", "ajuda", "help"],
@@ -40,7 +37,7 @@ export const FIXED_RESPONSES: FixedResponse[] = [
   },
 ];
 
-export function findReply(text: string): string {
+export function findReply(text: string): string | null {
   const normalized = text.trim().toLowerCase();
 
   // Command with a mention like /start@MeuBot still matches /start
@@ -51,5 +48,5 @@ export function findReply(text: string): string {
       return fixed.reply;
     }
   }
-  return FALLBACK_MESSAGE;
+  return null;
 }

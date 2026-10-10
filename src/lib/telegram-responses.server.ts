@@ -41,9 +41,15 @@ type Keyboard = { text: string; callback_data: string }[][];
 
 const BACK: Keyboard = [[{ text: "⬅️ Voltar", callback_data: "settings:menu" }]];
 
+const SETTINGS_MENU_TEXT = [
+  '﹒︶𝆹𝅥﹒<tg-emoji emoji-id="5420462475189432571">🎀</tg-emoji> 𑁘 Yaoitopic cσmandos︐！  <tg-emoji emoji-id="4904936030232117798">🌸</tg-emoji>',
+  "",
+  "⎯ㅤ𝅭  Sejam bem vindos a área de suporte do bot Yaoitopic. Um bot criado pada a divisão e passatempo para as fãs de Bl. Por aqui você encontrará todos os comandos necessários para se divertir o bastante!",
+].join("\n");
+
 const SETTINGS_PAGES: Record<string, { text: string; keyboard: Keyboard }> = {
   menu: {
-    text: "⚙️ <b>Configurações</b>\n\nEscolha uma opção abaixo:",
+    text: SETTINGS_MENU_TEXT,
     keyboard: [
       [{ text: "🎮 Jogos", callback_data: "settings:jogos" }],
       [{ text: "🕹️ Controles do jogo", callback_data: "settings:controles" }],

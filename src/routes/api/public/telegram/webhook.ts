@@ -389,7 +389,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // /game_peitoral: mesmo jogo, com rodadas próprias
         if (firstWord === "/game_peitoral") {
-          await sendTelegramPhoto(chatId, SINOPSE_IMAGE_URL, PEITORAL_INTRO_MESSAGE);
+          await sendTelegramPhoto(chatId, PEITORAL_IMAGE_URL, PEITORAL_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           wrongGuessers.delete(chatId);
           const game = newGame(Math.random, toRounds(await loadRounds("peitoral")));

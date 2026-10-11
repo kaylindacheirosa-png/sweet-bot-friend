@@ -71,9 +71,64 @@ const SETTINGS_PAGES: Record<string, { text: string; keyboard: Keyboard }> = {
   contato: { text: "📬 Fale com a equipe pelo e-mail: contato@exemplo.com", keyboard: BACK },
 };
 
+SETTINGS_PAGES["menu"]!.keyboard.splice(1, 0, [
+  { text: "⌨️ Typing Battle", callback_data: "typing:show" },
+]);
+
 /** Página do /settings; páginas desconhecidas voltam ao menu. */
 export function buildSettingsPage(page: string) {
   return SETTINGS_PAGES[page] ?? SETTINGS_PAGES["menu"]!;
+}
+
+export interface TypingSettings {
+  enabled: boolean;
+  frequency_minutes: number;
+  style: string;
+}
+
+export const TYPING_FREQUENCIES = [5, 10, 15, 30, 60];
+export const TYPING_STYLES = ["sinopse", "peitoral", "ambos"];
+const STYLE_LABEL: Record<string, string> = {
+  sinopse: "Sinopse 🍿",
+  peitoral: "Peitoral 👀",
+  ambos: "Sinopse + Peitoral",
+};
+
+const TYPING_TEXT = [
+  '<tg-emoji emoji-id="5429273196870254885">⌨️</tg-emoji>﹕Typing Battle﹒᱖',
+  "",
+  '➜﹕<tg-emoji emoji-id="6043930317402676062">💬</tg-emoji>໑﹒ O bot enviará no chat um tópico de BL, e os usuários deverão tentar adivinhá-lo o mais rápido possível. Vence quem enviar a resposta correta primeiro.﹒ゞ﹑ᶻz ﹒',
+].join("\n");
+
+/** Próximo item de uma lista cíclica. */
+export function nextInCycle<T>(list: T[], current: T): T {
+  const i = list.indexOf(current);
+  return list[(i + 1) % list.length]!;
+}
+
+export function applyTypingAction(s: TypingSettings, action: string): TypingSettings {
+  if (action === "toggle") return { ...s, enabled: !s.enabled };
+  if (action === "freq")
+    return { ...s, frequency_minutes: nextInCycle(TYPING_FREQUENCIES, s.frequency_minutes) };
+  if (action === "style") return { ...s, style: nextInCycle(TYPING_STYLES, s.style) };
+  return s;
+}
+
+export function buildTypingPage(s: TypingSettings): { text: string; keyboard: Keyboard } {
+  return {
+    text: TYPING_TEXT,
+    keyboard: [
+      [
+        {
+          text: s.enabled ? "✅ Jogo ativado (tocar p/ desativar)" : "❌ Jogo desativado (tocar p/ ativar)",
+          callback_data: "typing:toggle",
+        },
+      ],
+      [{ text: `⏱️ Frequência: a cada ${s.frequency_minutes} min`, callback_data: "typing:freq" }],
+      [{ text: `🎭 Estilo: ${STYLE_LABEL[s.style] ?? s.style}`, callback_data: "typing:style" }],
+      ...BACK,
+    ],
+  };
 }
 
 export function findReply(text: string): string | null {

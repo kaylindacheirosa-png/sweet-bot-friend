@@ -15,6 +15,13 @@
       "when": 1791549155156,
       "tag": "0001_add_game_column",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791722048654,
+      "tag": "0002_typing_battle_settings",
+      "breakpoints": true
     }
   ]
 }

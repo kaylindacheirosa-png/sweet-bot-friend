@@ -39,3 +39,14 @@ describe("página inicial do /settings", () => {
     expect(buildSettingsPage("inexistente").text).toBe(menu.text);
   });
 });
+
+import { applyTypingAction as ta } from "@/lib/telegram-responses.server";
+describe("typing battle settings", () => {
+  const base = { enabled: false, frequency_minutes: 10, style: "sinopse" };
+  it("toggle liga/desliga", () => expect(ta(base, "toggle").enabled).toBe(true));
+  it("frequência cicla 10 -> 15 e 60 -> 5", () => {
+    expect(ta(base, "freq").frequency_minutes).toBe(15);
+    expect(ta({ ...base, frequency_minutes: 60 }, "freq").frequency_minutes).toBe(5);
+  });
+  it("estilo cicla sinopse -> peitoral", () => expect(ta(base, "style").style).toBe("peitoral"));
+});

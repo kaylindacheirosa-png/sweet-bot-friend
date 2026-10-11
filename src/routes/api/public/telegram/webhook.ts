@@ -78,7 +78,7 @@ async function handleAddFlow(
       .upsert({ user_id: userId, step: "game", synopsis: null, game: null });
     await sendTelegramMessage(
       chatId,
-      "🎮 Em qual comando você quer adicionar a rodada?\n\n1 — /game_sinopse\n2 — /game_peitoral\n\n(ou /cancelar)",
+      "🎮 Em qual comando você quer adicionar a rodada?\n\n1 — /game_sinopse\n2 — /game_peitoral\n3 — /game_emoji\n\n(ou /cancelar)",
     );
     return true;
   }
@@ -98,9 +98,14 @@ async function handleAddFlow(
         ? "sinopse"
         : g === "2" || g.includes("peitoral")
           ? "peitoral"
-          : null;
+          : g === "3" || g.includes("emoji")
+            ? "emoji"
+            : null;
     if (!game) {
-      await sendTelegramMessage(chatId, "Responda 1 (/game_sinopse) ou 2 (/game_peitoral).");
+      await sendTelegramMessage(
+        chatId,
+        "Responda 1 (/game_sinopse), 2 (/game_peitoral) ou 3 (/game_emoji).",
+      );
       return true;
     }
     await sb.from("bot_add_sessions").update({ step: "synopsis", game }).eq("user_id", userId);
@@ -108,7 +113,9 @@ async function handleAddFlow(
       chatId,
       game === "peitoral"
         ? "🖼️ Mande a imagem da rodada (pode ter legenda) ou um texto. (ou /cancelar)"
-        : "📝 Qual é a sinopse? (ou /cancelar)",
+        : game === "emoji"
+          ? "😀 Mande a sequência de emojis da rodada. (ou /cancelar)"
+          : "📝 Qual é a sinopse? (ou /cancelar)",
     );
     return true;
   }
@@ -150,6 +157,8 @@ async function handleAddFlow(
 const SINOPSE_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5444896024445352143">💋</tg-emoji>﹒⦙⦙𑊁᷼ <tg-emoji emoji-id="5003645910681388672">💋</tg-emoji>OGO DA <tg-emoji emoji-id="5003544549453202818">📎</tg-emoji>INOPSE <tg-emoji emoji-id="4981007597625673295">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5447328517828148260">💬</tg-emoji>﹒Neste jogo, iremos mandar sinopses de determinadas obras de boys love. Sua missão será identificar corretamente de qual obra estamos falando. . ⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5429392313493242588">💗</tg-emoji>﹑<tg-emoji emoji-id="5413656137436270977">💜</tg-emoji>oa <tg-emoji emoji-id="5411517200773186685">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5445068445907449682">🍀</tg-emoji>`;
 
 const PEITORAL_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5240004588114829391">✨</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5082316568944182103">💋</tg-emoji>OGO DO <tg-emoji emoji-id="5134415857979491173">📎</tg-emoji>EITOTAL <tg-emoji emoji-id="6042107490332579591">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5890739983689455462">💬</tg-emoji>﹒Neste jogo, sua missão é descobrir de quem são os incríveis, majestosos e suculentos (ou não) seios. ﹒⢷⌒𑁯\n\n﹒★﹑Sua reposta vale ao nome do personagem e da obra.﹗﹒\n\n﹒﹒<tg-emoji emoji-id="6042001219956775130">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5260339961181275846">🍀</tg-emoji>`;
+
+const EMOJI_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5269464520417363323">💋</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5251430025755903710">💋</tg-emoji>DIVINHA PELO <tg-emoji emoji-id="5003988713496118896">📎</tg-emoji>MOJI  ゙౿\n\n＞ <tg-emoji emoji-id="5429477976615961027">💬</tg-emoji>﹒Nesse jogo, iremos mandar uma sequência de emojis e sua missão é adivinhar de qual obra estamos nos referindo. ﹒⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5343844021020154537">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="6041684689456994224">🍀</tg-emoji>`;
 
 function deriveWebhookSecret(telegramApiKey: string): string {
   return createHash("sha256").update(`telegram-webhook:${telegramApiKey}`).digest("base64url");
@@ -468,6 +477,18 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           wrongGuessers.delete(chatId);
           const game = newGame(Math.random, toRounds(await loadRounds("peitoral")));
+          if (game.order.length === 0) {
+            await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
+          } else await postSinopseRound(chatId, game);
+          return Response.json({ ok: true });
+        }
+
+        // /game_emoji: adivinhar a obra pela sequência de emojis
+        if (firstWord === "/game_emoji") {
+          await sendTelegramMessage(chatId, EMOJI_INTRO_MESSAGE);
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
+          wrongGuessers.delete(chatId);
+          const game = newGame(Math.random, toRounds(await loadRounds("emoji")), "emoji");
           if (game.order.length === 0) {
             await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
           } else await postSinopseRound(chatId, game);

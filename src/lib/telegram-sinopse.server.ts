@@ -130,6 +130,7 @@ export function newGame(
     position: 0,
     players: [],
     ...(rounds ? { rounds } : {}),
+    ...(game ? { game } : {}),
   };
 }
 

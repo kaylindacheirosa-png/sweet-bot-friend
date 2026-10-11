@@ -25,6 +25,8 @@ export interface SinopseState {
   players: Player[];
   /** Rodadas deste jogo (padrão: SINOPSE_ROUNDS). */
   rounds?: SinopseRound[];
+  /** Tipo do jogo quando usa rodadas próprias (peitoral, emoji). */
+  game?: "peitoral" | "emoji";
 }
 
 function roundsOf(state: SinopseState): SinopseRound[] {

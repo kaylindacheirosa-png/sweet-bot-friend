@@ -74,7 +74,9 @@ const SETTINGS_PAGES: Record<string, { text: string; keyboard: Keyboard }> = {
 
 /** Página do /settings; páginas desconhecidas voltam ao menu. */
 export function buildSettingsPage(page: string) {
-  return SETTINGS_PAGES[page] ?? SETTINGS_PAGES.menu;
+  const result = SETTINGS_PAGES[page] ?? SETTINGS_PAGES["menu"];
+  if (!result) throw new Error("Settings menu is unavailable");
+  return result;
 }
 
 export interface TypingSettings {

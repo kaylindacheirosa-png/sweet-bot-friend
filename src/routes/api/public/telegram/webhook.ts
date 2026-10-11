@@ -78,7 +78,7 @@ async function handleAddFlow(
       .upsert({ user_id: userId, step: "game", synopsis: null, game: null });
     await sendTelegramMessage(
       chatId,
-      "🎮 Em qual comando você quer adicionar a rodada?\n\n1 — /game_sinopse\n2 — /game_peitoral\n\n(ou /cancelar)",
+      "🎮 Em qual comando você quer adicionar a rodada?\n\n1 — /game_sinopse\n2 — /game_peitoral\n3 — /game_emoji\n\n(ou /cancelar)",
     );
     return true;
   }
@@ -98,9 +98,14 @@ async function handleAddFlow(
         ? "sinopse"
         : g === "2" || g.includes("peitoral")
           ? "peitoral"
-          : null;
+          : g === "3" || g.includes("emoji")
+            ? "emoji"
+            : null;
     if (!game) {
-      await sendTelegramMessage(chatId, "Responda 1 (/game_sinopse) ou 2 (/game_peitoral).");
+      await sendTelegramMessage(
+        chatId,
+        "Responda 1 (/game_sinopse), 2 (/game_peitoral) ou 3 (/game_emoji).",
+      );
       return true;
     }
     await sb.from("bot_add_sessions").update({ step: "synopsis", game }).eq("user_id", userId);
@@ -470,6 +475,18 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           wrongGuessers.delete(chatId);
           const game = newGame(Math.random, toRounds(await loadRounds("peitoral")));
+          if (game.order.length === 0) {
+            await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
+          } else await postSinopseRound(chatId, game);
+          return Response.json({ ok: true });
+        }
+
+        // /game_emoji: adivinhar a obra pela sequência de emojis
+        if (firstWord === "/game_emoji") {
+          await sendTelegramMessage(chatId, EMOJI_INTRO_MESSAGE);
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
+          wrongGuessers.delete(chatId);
+          const game = newGame(Math.random, toRounds(await loadRounds("emoji")), "emoji");
           if (game.order.length === 0) {
             await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
           } else await postSinopseRound(chatId, game);

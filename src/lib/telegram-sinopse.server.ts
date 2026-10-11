@@ -113,7 +113,11 @@ function boldNum(n: number): string {
 }
 
 /** Sorteia até MAX_ROUNDS rodadas (só as que têm resposta). */
-export function newGame(random: () => number = Math.random, rounds?: SinopseRound[]): SinopseState {
+export function newGame(
+  random: () => number = Math.random,
+  rounds?: SinopseRound[],
+  game?: "peitoral" | "emoji",
+): SinopseState {
   const pool = (rounds ?? SINOPSE_ROUNDS)
     .map((r, i) => (r.answers.length ? i : -1))
     .filter((i) => i >= 0);

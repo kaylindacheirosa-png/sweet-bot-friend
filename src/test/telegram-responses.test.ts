@@ -40,13 +40,25 @@ describe("página inicial do /settings", () => {
   });
 });
 
-import { applyTypingAction as ta } from "@/lib/telegram-responses.server";
+import { applyTypingAction as ta, TYPING_FREQUENCIES, selectedTypingStyles } from "@/lib/telegram-responses.server";
 describe("typing battle settings", () => {
-  const base = { enabled: false, frequency_minutes: 10, style: "sinopse" };
+  const base = { enabled: false, frequency_minutes: 30, style: "sinopse" };
   it("toggle liga/desliga", () => expect(ta(base, "toggle").enabled).toBe(true));
-  it("frequência cicla 10 -> 15 e 60 -> 5", () => {
-    expect(ta(base, "freq").frequency_minutes).toBe(15);
-    expect(ta({ ...base, frequency_minutes: 60 }, "freq").frequency_minutes).toBe(5);
+  it("frequências são apenas 30 min, 1 hora, 2 horas e 5 horas", () => {
+    expect(TYPING_FREQUENCIES).toEqual([30, 60, 120, 300]);
+    expect([30, 60, 120, 300].map(frequency_minutes => ta({ ...base, frequency_minutes }, "freq").frequency_minutes)).toEqual([60, 120, 300, 30]);
   });
-  it("estilo cicla sinopse -> peitoral", () => expect(ta(base, "style").style).toBe("peitoral"));
+  it("abrir estilos não muda a seleção", () => expect(ta(base, "style").style).toBe("sinopse"));
+  it("cada estilo pode ser ligado ou desligado independentemente", () => {
+    const both = ta(base, "style:peitoral");
+    expect(selectedTypingStyles(both.style)).toEqual(["sinopse", "peitoral"]);
+    const onlyPeitoral = ta(both, "style:sinopse");
+    expect(selectedTypingStyles(onlyPeitoral.style)).toEqual(["peitoral"]);
+    const none = ta(onlyPeitoral, "style:peitoral");
+    expect(selectedTypingStyles(none.style)).toEqual([]);
+    expect(selectedTypingStyles(ta(none, "style:sinopse").style)).toEqual(["sinopse"]);
+  });
+  it("frequências antigas voltam ao intervalo mínimo de 30 min", () => {
+    expect(ta({ ...base, frequency_minutes: 10 }, "toggle").frequency_minutes).toBe(30);
+  });
 });

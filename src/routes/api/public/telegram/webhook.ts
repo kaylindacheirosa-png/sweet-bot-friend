@@ -382,15 +382,15 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               .select("enabled, frequency_minutes, style")
               .eq("chat_id", msg.chat.id)
               .maybeSingle();
-            let s = row ?? { enabled: false, frequency_minutes: 10, style: "sinopse" };
+            let s = row ?? { enabled: false, frequency_minutes: 30, style: "sinopse" };
             const action = callbackQuery.data.slice(7);
-            if (action !== "show") {
+            if (action === "toggle" || action === "freq" || action === "style:sinopse" || action === "style:peitoral") {
               s = applyTypingAction(s, action);
               await sb
                 .from("typing_battle_settings")
                 .upsert({ chat_id: msg.chat.id, ...s, updated_at: new Date().toISOString() });
             }
-            const page = buildTypingPage(s);
+            const page = buildTypingPage(s, action === "style" || action.startsWith("style:"));
             await callTelegram("editMessageText", {
               chat_id: msg.chat.id,
               message_id: msg.message_id,

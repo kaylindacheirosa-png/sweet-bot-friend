@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHash, timingSafeEqual } from "crypto";
-import { findReply, buildSettingsPage, WELCOME_MESSAGE } from "@/lib/telegram-responses.server";
+import {
+  findReply,
+  buildSettingsPage,
+  buildTypingPage,
+  applyTypingAction,
+  WELCOME_MESSAGE,
+} from "@/lib/telegram-responses.server";
 import {
   QUIZ_QUESTIONS,
   buildQuestionMessage,
@@ -356,6 +362,35 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await answerCallbackQuery(callbackQuery.id);
           if (typeof msg?.chat?.id === "number") {
             const page = buildSettingsPage(callbackQuery.data.slice(9));
+            await callTelegram("editMessageText", {
+              chat_id: msg.chat.id,
+              message_id: msg.message_id,
+              text: page.text,
+              parse_mode: "HTML",
+              reply_markup: { inline_keyboard: page.keyboard },
+            });
+          }
+          return Response.json({ ok: true });
+        }
+        if (callbackQuery?.data?.startsWith("typing:")) {
+          const msg = callbackQuery.message;
+          await answerCallbackQuery(callbackQuery.id);
+          if (typeof msg?.chat?.id === "number") {
+            const sb = await db();
+            const { data: row } = await sb
+              .from("typing_battle_settings")
+              .select("enabled, frequency_minutes, style")
+              .eq("chat_id", msg.chat.id)
+              .maybeSingle();
+            let s = row ?? { enabled: false, frequency_minutes: 10, style: "sinopse" };
+            const action = callbackQuery.data.slice(7);
+            if (action !== "show") {
+              s = applyTypingAction(s, action);
+              await sb
+                .from("typing_battle_settings")
+                .upsert({ chat_id: msg.chat.id, ...s, updated_at: new Date().toISOString() });
+            }
+            const page = buildTypingPage(s);
             await callTelegram("editMessageText", {
               chat_id: msg.chat.id,
               message_id: msg.message_id,

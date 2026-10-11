@@ -113,7 +113,9 @@ async function handleAddFlow(
       chatId,
       game === "peitoral"
         ? "🖼️ Mande a imagem da rodada (pode ter legenda) ou um texto. (ou /cancelar)"
-        : "📝 Qual é a sinopse? (ou /cancelar)",
+        : game === "emoji"
+          ? "😀 Mande a sequência de emojis da rodada. (ou /cancelar)"
+          : "📝 Qual é a sinopse? (ou /cancelar)",
     );
     return true;
   }

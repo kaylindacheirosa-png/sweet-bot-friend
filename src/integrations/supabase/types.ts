@@ -65,6 +65,30 @@ export type Database = {
         }
         Relationships: []
       }
+      typing_battle_settings: {
+        Row: {
+          chat_id: number
+          enabled: boolean
+          frequency_minutes: number
+          style: string
+          updated_at: string
+        }
+        Insert: {
+          chat_id: number
+          enabled?: boolean
+          frequency_minutes?: number
+          style?: string
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: number
+          enabled?: boolean
+          frequency_minutes?: number
+          style?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

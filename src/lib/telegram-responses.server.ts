@@ -52,6 +52,7 @@ const SETTINGS_PAGES: Record<string, { text: string; keyboard: Keyboard }> = {
     text: SETTINGS_MENU_TEXT,
     keyboard: [
       [{ text: "🎮 Jogos", callback_data: "settings:jogos" }],
+      [{ text: "⌨️ Typing Battle", callback_data: "typing:show" }],
       [{ text: "🕹️ Controles do jogo", callback_data: "settings:controles" }],
       [
         { text: "🕛 Horário", callback_data: "settings:horario" },
@@ -71,13 +72,11 @@ const SETTINGS_PAGES: Record<string, { text: string; keyboard: Keyboard }> = {
   contato: { text: "📬 Fale com a equipe pelo e-mail: contato@exemplo.com", keyboard: BACK },
 };
 
-SETTINGS_PAGES["menu"]!.keyboard.splice(1, 0, [
-  { text: "⌨️ Typing Battle", callback_data: "typing:show" },
-]);
-
 /** Página do /settings; páginas desconhecidas voltam ao menu. */
 export function buildSettingsPage(page: string) {
-  return SETTINGS_PAGES[page] ?? SETTINGS_PAGES["menu"]!;
+  const result = SETTINGS_PAGES[page] ?? SETTINGS_PAGES["menu"];
+  if (!result) throw new Error("Settings menu is unavailable");
+  return result;
 }
 
 export interface TypingSettings {
@@ -86,13 +85,20 @@ export interface TypingSettings {
   style: string;
 }
 
-export const TYPING_FREQUENCIES = [5, 10, 15, 30, 60];
-export const TYPING_STYLES = ["sinopse", "peitoral", "ambos"];
-const STYLE_LABEL: Record<string, string> = {
-  sinopse: "Sinopse 🍿",
-  peitoral: "Peitoral 👀",
-  ambos: "Sinopse + Peitoral",
-};
+export const TYPING_FREQUENCIES = [30, 60, 120, 300];
+export const TYPING_STYLES = ["sinopse", "peitoral"];
+
+export function normalizeTypingSettings(s: TypingSettings): TypingSettings {
+  return {
+    ...s,
+    frequency_minutes: TYPING_FREQUENCIES.includes(s.frequency_minutes) ? s.frequency_minutes : 30,
+  };
+}
+
+export function selectedTypingStyles(style: string): string[] {
+  if (style === "ambos") return [...TYPING_STYLES];
+  return TYPING_STYLES.includes(style) ? [style] : [];
+}
 
 const TYPING_TEXT = [
   '<tg-emoji emoji-id="5429273196870254885">⌨️</tg-emoji>﹕Typing Battle﹒᱖',
@@ -103,29 +109,46 @@ const TYPING_TEXT = [
 /** Próximo item de uma lista cíclica. */
 export function nextInCycle<T>(list: T[], current: T): T {
   const i = list.indexOf(current);
-  return list[(i + 1) % list.length]!;
+  const next = list[(i + 1) % list.length];
+  if (next === undefined) throw new Error("Cannot cycle an empty list");
+  return next;
 }
 
 export function applyTypingAction(s: TypingSettings, action: string): TypingSettings {
+  s = normalizeTypingSettings(s);
   if (action === "toggle") return { ...s, enabled: !s.enabled };
   if (action === "freq")
     return { ...s, frequency_minutes: nextInCycle(TYPING_FREQUENCIES, s.frequency_minutes) };
-  if (action === "style") return { ...s, style: nextInCycle(TYPING_STYLES, s.style) };
+  if (action.startsWith("style:")) {
+    const target = action.slice(6);
+    if (!TYPING_STYLES.includes(target)) return s;
+    const selected = new Set(selectedTypingStyles(s.style));
+    if (selected.has(target)) selected.delete(target);
+    else selected.add(target);
+    return { ...s, style: selected.size === 2 ? "ambos" : [...selected][0] ?? "nenhum" };
+  }
   return s;
 }
 
-export function buildTypingPage(s: TypingSettings): { text: string; keyboard: Keyboard } {
+export function buildTypingPage(s: TypingSettings, showStyles = false): { text: string; keyboard: Keyboard } {
+  s = normalizeTypingSettings(s);
+  const selected = selectedTypingStyles(s.style);
+  const frequency = s.frequency_minutes === 30 ? "30 min" : `${s.frequency_minutes / 60} ${s.frequency_minutes === 60 ? "hora" : "horas"}`;
   return {
     text: TYPING_TEXT,
     keyboard: [
       [
         {
-          text: s.enabled ? "✅ Jogo ativado (tocar p/ desativar)" : "❌ Jogo desativado (tocar p/ ativar)",
+          text: s.enabled ? "Estado: ✅️" : "Estado: ❌",
           callback_data: "typing:toggle",
         },
       ],
-      [{ text: `⏱️ Frequência: a cada ${s.frequency_minutes} min`, callback_data: "typing:freq" }],
-      [{ text: `🎭 Estilo: ${STYLE_LABEL[s.style] ?? s.style}`, callback_data: "typing:style" }],
+      [{ text: `⏱️ Frequência: ${frequency}`, callback_data: "typing:freq" }],
+      [{ text: "🎭 Estilo", callback_data: "typing:style" }],
+      ...(showStyles ? [[
+        { text: `${selected.includes("sinopse") ? "✅" : "❌"} Sinopse`, callback_data: "typing:style:sinopse" },
+        { text: `${selected.includes("peitoral") ? "✅" : "❌"} Peitoral`, callback_data: "typing:style:peitoral" },
+      ]] : []),
       ...BACK,
     ],
   };

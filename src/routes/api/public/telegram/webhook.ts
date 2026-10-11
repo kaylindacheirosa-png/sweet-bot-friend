@@ -151,6 +151,8 @@ const SINOPSE_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5444896024445352143">�
 
 const PEITORAL_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5240004588114829391">✨</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5082316568944182103">💋</tg-emoji>OGO DO <tg-emoji emoji-id="5134415857979491173">📎</tg-emoji>EITOTAL <tg-emoji emoji-id="6042107490332579591">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5890739983689455462">💬</tg-emoji>﹒Neste jogo, sua missão é descobrir de quem são os incríveis, majestosos e suculentos (ou não) seios. ﹒⢷⌒𑁯\n\n﹒★﹑Sua reposta vale ao nome do personagem e da obra.﹗﹒\n\n﹒﹒<tg-emoji emoji-id="6042001219956775130">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5260339961181275846">🍀</tg-emoji>`;
 
+const EMOJI_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5269464520417363323">💋</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5251430025755903710">💋</tg-emoji>DIVINHA PELO <tg-emoji emoji-id="5003988713496118896">📎</tg-emoji>MOJI  ゙౿\n\n＞ <tg-emoji emoji-id="5429477976615961027">💬</tg-emoji>﹒Nesse jogo, iremos mandar uma sequência de emojis e sua missão é adivinhar de qual obra estamos nos referindo. ﹒⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5343844021020154537">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="6041684689456994224">🍀</tg-emoji>`;
+
 function deriveWebhookSecret(telegramApiKey: string): string {
   return createHash("sha256").update(`telegram-webhook:${telegramApiKey}`).digest("base64url");
 }

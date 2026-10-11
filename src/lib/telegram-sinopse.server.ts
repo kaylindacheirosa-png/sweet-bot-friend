@@ -144,13 +144,19 @@ export function currentRoundIndex(state: SinopseState): number {
 
 export function buildSinopseRound(state: SinopseState): string {
   const round = currentRound(state);
-  const peitoral = Boolean(state.rounds);
-  const titleEmoji = peitoral
-    ? '<tg-emoji emoji-id="5343648776101845769">💗</tg-emoji>'
-    : '<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji>';
-  const question = peitoral
-    ? 'Que personagem ou obra é esses seios suculentos? <tg-emoji emoji-id="6042098256152894179">💭</tg-emoji>ᰍ﹒'
-    : 'Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>';
+  const game = state.game ?? (state.rounds ? "peitoral" : "sinopse");
+  const titleEmoji =
+    game === "peitoral"
+      ? '<tg-emoji emoji-id="5343648776101845769">💗</tg-emoji>'
+      : game === "emoji"
+        ? '<tg-emoji emoji-id="5251430025755903710">💗</tg-emoji>'
+        : '<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji>';
+  const question =
+    game === "peitoral"
+      ? 'Que personagem ou obra é esses seios suculentos? <tg-emoji emoji-id="6042098256152894179">💭</tg-emoji>ᰍ﹒'
+      : game === "emoji"
+        ? 'Que obra esses emojis representam? ᰍ﹒<tg-emoji emoji-id="5003988713496118896">💭</tg-emoji>'
+        : 'Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>';
   return (
     `.﹒୨${titleEmoji} 𝗥𝗢𝗗𝗔𝗗𝗔 ${boldNum(state.position + 1)}\n\n` +
     (round.synopsis ? `<i>${round.synopsis}</i>\n\n` : "") +

@@ -1,4 +1,5 @@
 # Bot Telegram
+- [x] Criar /delete e /editar exclusivos da dona, por resposta ao perfil/rodada, com confirmação de exclusão; 37 testes passaram, incluindo banco real e reembolso único. Envio em conversa real do Telegram não verificado.
 - [x] Cadastrar personagens com foto e mostrar /im com posição e preço por interesse.
 - [x] Implementar /wish (até 5), /casar, /dar, /trocar com aceite e /divórcio com reembolso integral.
 - [x] Verificar segurança e transações: 48 testes passaram, compras e /im exercitados com dados temporários persistidos, compilação OK e chamadas sem assinatura rejeitadas; envio em conversa real do Telegram não verificado.

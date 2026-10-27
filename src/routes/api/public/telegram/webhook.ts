@@ -48,7 +48,7 @@ async function loadRounds(game: "sinopse" | "peitoral" | "emoji") {
     await db()
   )
     .from("sinopse_rounds")
-    .select("synopsis, answer, photo_file_id")
+    .select("id, synopsis, answer, photo_file_id")
     .eq("game", game)
     .order("created_at");
   if (error) console.error("load rounds failed", error);
@@ -231,9 +231,14 @@ const wrongGuessers = new Map<number, { id: number; name: string; username?: str
 
 async function postSinopseRound(chatId: number, state: SinopseState): Promise<void> {
   activeGames.set(chatId, state);
-  const photo = currentRound(state).photo;
-  if (photo) await sendTelegramPhoto(chatId, photo, buildSinopseRound(state));
-  else await sendTelegramMessage(chatId, buildSinopseRound(state));
+  const round = currentRound(state);
+  const result = round.photo
+    ? await sendTelegramPhoto(chatId, round.photo, buildSinopseRound(state))
+    : await sendTelegramMessage(chatId, buildSinopseRound(state));
+  if (round.id) {
+    const { recordContentMessage } = await import("@/lib/telegram-content.server");
+    await recordContentMessage(chatId, result, "round", round.id);
+  }
 }
 
 async function finishSinopse(chatId: number, state: SinopseState): Promise<void> {
@@ -247,7 +252,7 @@ async function sendTelegramPhoto(
   chatId: number,
   photoUrl: string,
   caption?: string,
-): Promise<void> {
+): Promise<number | null> {
   const body: Record<string, unknown> = { chat_id: chatId, photo: photoUrl };
   if (caption) {
     body["caption"] = caption;
@@ -289,14 +294,20 @@ async function sendTelegramPhoto(
         },
         body: form,
       });
-      if (retry.ok) return;
+      if (retry.ok) {
+        const json = await retry.json() as { result?: { message_id?: number } };
+        return json.result?.message_id ?? null;
+      }
       console.error(`Telegram sendPhoto upload failed [${retry.status}]: ${await retry.text()}`);
     } catch (e) {
       console.error("sendPhoto upload error", e);
     }
     // Último recurso: manda só o texto
-    if (caption) await sendTelegramMessage(chatId, caption);
+    if (caption) return await sendTelegramMessage(chatId, caption);
+    return null;
   }
+  const json = await response.json() as { result?: { message_id?: number } };
+  return json.result?.message_id ?? null;
 }
 
 async function answerCallbackQuery(callbackQueryId: string): Promise<void> {
@@ -391,6 +402,15 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if (update?.edited_message && !update?.message && !update?.callback_query) {
           return Response.json({ ok: true, ignored: true });
         }
+        const { handleContentUpdate } = await import("@/lib/telegram-content.server");
+        if (await handleContentUpdate(update, {
+          send: sendTelegramMessage,
+          answer: answerCallbackQuery,
+          botId: async () => {
+            const bot = await callTelegram("getMe", {});
+            return typeof bot?.id === "number" ? bot.id : null;
+          },
+        })) return Response.json({ ok: true });
         const { handleCharacterUpdate } = await import("@/lib/telegram-characters.server");
         if (await handleCharacterUpdate(update, {
           send: sendTelegramMessage,
@@ -608,6 +628,19 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if (!text.trim().startsWith("/")) {
           const active = activeGames.get(chatId);
           if (active) {
+            const round = currentRound(active);
+            if (round.id) {
+              const { data: saved, error } = await (await db()).from("sinopse_rounds").select("id,synopsis,answer,photo_file_id").eq("id", round.id).maybeSingle();
+              if (error) throw error;
+              if (!saved) {
+                const next = skipRound(active);
+                if (next.finished) await finishSinopse(chatId, next.state);
+                else await postSinopseRound(chatId, next.state);
+                return Response.json({ ok: true });
+              }
+              const refreshed = toRounds([saved])[0];
+              if (refreshed) Object.assign(round, refreshed, { photo: saved.photo_file_id ?? undefined });
+            }
             const from = message.from;
             if (!from || from.is_bot) return Response.json({ ok: true });
             const name =

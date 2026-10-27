@@ -257,8 +257,8 @@ export async function handleCharacterUpdate(
         if (error) throw error;
         if (!c || !c.name || !c.work || !c.photo_file_id || c.price === null || c.position === null)
           await io.send(chat.id, "Personagem não encontrado.");
-        else
-          await io.photo(
+        else {
+          const result = await io.photo(
             chat.id,
             c.photo_file_id,
             buildCharacterCard({
@@ -270,6 +270,11 @@ export async function handleCharacterUpdate(
               owner_username: c.owner_username,
             }),
           );
+          if (c.id) {
+            const { recordContentMessage } = await import("./telegram-content.server");
+            await recordContentMessage(chat.id, result, "character", c.id);
+          }
+        }
       } else
         await sendResult(command === "/wish" ? "wish" : command === "/casar" ? "buy" : "divorce", {
           name_key: characterKey(argument),

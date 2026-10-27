@@ -15,3 +15,4 @@
 - Character economy lives in a dedicated server-only handler invoked after Telegram signature verification; service-role-only atomic RPCs serialize mutations and store update-based receipts to prevent duplicate spending and refunds.
 - Character rank and current price are derived from wishes and purchase counts; refund credit follows the character through trades so divorce returns its recorded purchase value exactly once.
 - Persist character onboarding and trade sessions in the database; never accept ownership, recipient identity or prices from callback payloads without checking stored records.
+- Owner content management runs after Telegram signature verification; persist sent-message targets and prompt-bound sessions, and serialize confirmed deletion and edits with the economy lock to preserve refunds and reject stale callbacks.

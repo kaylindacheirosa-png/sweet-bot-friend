@@ -3,6 +3,7 @@
 // Sem banco de dados: o jogo de cada chat fica na memória do servidor.
 
 export interface SinopseRound {
+  id?: string;
   synopsis: string;
   answers: string[];
   display: string;
@@ -35,9 +36,10 @@ function roundsOf(state: SinopseState): SinopseRound[] {
 
 /** Converte linhas salvas em rodadas. */
 export function toRounds(
-  extra: { synopsis: string; answer: string; photo_file_id?: string | null }[],
+  extra: { id?: string; synopsis: string; answer: string; photo_file_id?: string | null }[],
 ): SinopseRound[] {
   return extra.map((r) => ({
+    ...(r.id ? { id: r.id } : {}),
     synopsis: r.synopsis ? `"${escapeHtml(r.synopsis)}"` : "",
     answers: parseAnswers(r.answer),
     display: r.answer,
@@ -59,11 +61,12 @@ export const SINOPSE_ROUNDS: SinopseRound[] = [
 const BASE_ROUND_COUNT = SINOPSE_ROUNDS.length;
 
 /** Junta as rodadas fixas com as adicionadas pelo /add. */
-export function setExtraRounds(extra: { synopsis: string; answer: string }[]): void {
+export function setExtraRounds(extra: { id?: string; synopsis: string; answer: string }[]): void {
   SINOPSE_ROUNDS.splice(
     BASE_ROUND_COUNT,
     SINOPSE_ROUNDS.length - BASE_ROUND_COUNT,
     ...extra.map((r) => ({
+      ...(r.id ? { id: r.id } : {}),
       synopsis: `"${escapeHtml(r.synopsis)}"`,
       answers: parseAnswers(r.answer),
       display: r.answer,

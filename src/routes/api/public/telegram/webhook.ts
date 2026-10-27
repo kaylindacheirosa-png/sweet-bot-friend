@@ -610,22 +610,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
 
         // /pular_rodada e /parar_sinopse controlam o jogo ativo
         if (firstWord === "/pular_rodada" || firstWord === "/parar_sinopse") {
-          let active = activeGames.get(chatId);
-          if (active) {
-            const round = currentRound(active);
-            if (round.id) {
-              const { data: saved, error } = await (await db()).from("sinopse_rounds").select("id,synopsis,answer,photo_file_id").eq("id", round.id).maybeSingle();
-              if (error) throw error;
-              if (!saved) {
-                const next = skipRound(active);
-                if (next.finished) await finishSinopse(chatId, next.state);
-                else await postSinopseRound(chatId, next.state);
-                return Response.json({ ok: true });
-              }
-              const refreshed = toRounds([saved])[0];
-              if (refreshed) Object.assign(round, refreshed, { photo: saved.photo_file_id ?? undefined });
-            }
-          }
+          const active = activeGames.get(chatId);
           if (!active) {
             await sendTelegramMessage(chatId, "Nenhum /game_sinopse ativo neste chat.");
           } else if (firstWord === "/parar_sinopse") {
@@ -643,6 +628,19 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         if (!text.trim().startsWith("/")) {
           const active = activeGames.get(chatId);
           if (active) {
+            const round = currentRound(active);
+            if (round.id) {
+              const { data: saved, error } = await (await db()).from("sinopse_rounds").select("id,synopsis,answer,photo_file_id").eq("id", round.id).maybeSingle();
+              if (error) throw error;
+              if (!saved) {
+                const next = skipRound(active);
+                if (next.finished) await finishSinopse(chatId, next.state);
+                else await postSinopseRound(chatId, next.state);
+                return Response.json({ ok: true });
+              }
+              const refreshed = toRounds([saved])[0];
+              if (refreshed) Object.assign(round, refreshed, { photo: saved.photo_file_id ?? undefined });
+            }
             const from = message.from;
             if (!from || from.is_bot) return Response.json({ ok: true });
             const name =

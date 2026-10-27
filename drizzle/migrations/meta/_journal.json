@@ -36,6 +36,13 @@
       "when": 1793118416966,
       "tag": "0004_gems_daily_rollover",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793120262278,
+      "tag": "0005_telegram_character_economy",
+      "breakpoints": true
     }
   ]
 }

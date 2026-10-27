@@ -65,6 +65,93 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_character_sessions: {
+        Row: {
+          chat_id: number
+          draft: Json
+          step: string
+          updated_at: string
+          user_id: number
+        }
+        Insert: {
+          chat_id: number
+          draft?: Json
+          step: string
+          updated_at?: string
+          user_id: number
+        }
+        Update: {
+          chat_id?: number
+          draft?: Json
+          step?: string
+          updated_at?: string
+          user_id?: number
+        }
+        Relationships: []
+      }
+      telegram_characters: {
+        Row: {
+          base_price: number
+          created_at: string
+          id: string
+          name: string
+          name_key: string
+          owner_id: number | null
+          paid_price: number
+          photo_file_id: string
+          purchases: number
+          work: string
+        }
+        Insert: {
+          base_price: number
+          created_at?: string
+          id?: string
+          name: string
+          name_key: string
+          owner_id?: number | null
+          paid_price?: number
+          photo_file_id: string
+          purchases?: number
+          work: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          id?: string
+          name?: string
+          name_key?: string
+          owner_id?: number | null
+          paid_price?: number
+          photo_file_id?: string
+          purchases?: number
+          work?: string
+        }
+        Relationships: []
+      }
+      telegram_economy_events: {
+        Row: {
+          action: string
+          created_at: string
+          event_key: string
+          result: Json
+          user_id: number
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          event_key: string
+          result: Json
+          user_id: number
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          event_key?: string
+          result?: Json
+          user_id?: number
+        }
+        Relationships: []
+      }
       telegram_gens: {
         Row: {
           balance: number
@@ -88,6 +175,104 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      telegram_trades: {
+        Row: {
+          chat_id: number
+          created_at: string
+          expires_at: string
+          id: string
+          proposer_character: string | null
+          proposer_id: number
+          recipient_character: string | null
+          recipient_id: number
+          status: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          proposer_character?: string | null
+          proposer_id: number
+          recipient_character?: string | null
+          recipient_id: number
+          status?: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          proposer_character?: string | null
+          proposer_id?: number
+          recipient_character?: string | null
+          recipient_id?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_trades_proposer_character_fkey"
+            columns: ["proposer_character"]
+            isOneToOne: false
+            referencedRelation: "telegram_character_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_trades_proposer_character_fkey"
+            columns: ["proposer_character"]
+            isOneToOne: false
+            referencedRelation: "telegram_characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_trades_recipient_character_fkey"
+            columns: ["recipient_character"]
+            isOneToOne: false
+            referencedRelation: "telegram_character_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_trades_recipient_character_fkey"
+            columns: ["recipient_character"]
+            isOneToOne: false
+            referencedRelation: "telegram_characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_wishes: {
+        Row: {
+          character_id: string
+          created_at: string
+          user_id: number
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          user_id: number
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_wishes_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_character_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_wishes_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_characters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       typing_battle_settings: {
         Row: {
@@ -115,7 +300,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      telegram_character_catalog: {
+        Row: {
+          base_price: number | null
+          created_at: string | null
+          id: string | null
+          name: string | null
+          name_key: string | null
+          owner_id: number | null
+          owner_username: string | null
+          paid_price: number | null
+          photo_file_id: string | null
+          position: number | null
+          price: number | null
+          purchases: number | null
+          wish_count: number | null
+          work: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       claim_telegram_daily: {
@@ -138,6 +341,16 @@ export type Database = {
           balance: number
           next_daily_at: string
         }[]
+      }
+      telegram_character_action: {
+        Args: {
+          p_action: string
+          p_args: Json
+          p_event_key: string
+          p_user_id: number
+          p_username: string
+        }
+        Returns: Json
       }
     }
     Enums: {

@@ -1,0 +1,40 @@
+import { describe, expect, it } from "vitest";
+import {
+  characterKey,
+  gemAmount,
+  characterDraft,
+  characterUpdateSchema,
+} from "@/lib/telegram-characters.server";
+
+describe("entradas dos personagens", () => {
+  it("procura o nome exato ignorando acentos, caixa e espaços extras", () => {
+    expect(characterKey("  Álpha   Trauma ")).toBe("alpha trauma");
+    expect(characterKey("Alpha")).not.toBe(characterKey("Alpha Trauma"));
+  });
+  it("Gems não permitem presentes negativos, fracionários ou vazios", () => {
+    for (const value of ["", "0", "-100", "1.5", "abc"])
+      expect(gemAmount.safeParse(value).success).toBe(false);
+    expect(gemAmount.parse("200")).toBe(200);
+  });
+  it("cadastro exige nome, obra, preço positivo e foto", () => {
+    const draft = { name: "Personagem", work: "Obra", base_price: 200, photo_file_id: "foto" };
+    expect(characterDraft.safeParse(draft).success).toBe(true);
+    for (const key of Object.keys(draft))
+      expect(characterDraft.safeParse({ ...draft, [key]: "" }).success).toBe(false);
+  });
+  it("uma mensagem editada não vira uma nova compra", () => {
+    const parsed = characterUpdateSchema.parse({
+      update_id: 1,
+      edited_message: { text: "/casar Personagem" },
+    });
+    expect(parsed.message).toBeUndefined();
+  });
+  it("rejeita identificadores inválidos fornecidos em mensagens", () => {
+    expect(
+      characterUpdateSchema.safeParse({
+        update_id: 1,
+        message: { chat: { id: 1, type: "private" }, from: { id: -1 } },
+      }).success,
+    ).toBe(false);
+  });
+});

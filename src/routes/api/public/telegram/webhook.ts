@@ -175,7 +175,7 @@ async function callGensRpc<T>(rpcName: string, payload: Record<string, unknown>)
     return null;
   }
 
-  const response = await fetch(`${supabaseUrl.replace(/\\/$/, "")}/rest/v1/rpc/${rpcName}`, {
+  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${rpcName}`, {
     method: "POST",
     headers: {
       apikey: serviceKey,

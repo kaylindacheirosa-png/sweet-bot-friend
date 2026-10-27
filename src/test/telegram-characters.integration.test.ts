@@ -115,4 +115,25 @@ describe.skipIf(!enabled)("economia real de personagens (dados temporários)", (
     expect((await action(a,"divorce",{name_key:characterKey(names[1] ?? "")})).ok).toBe(false);
     expect(await balance(a)).toBe(before+200);
   });
+  it("só uma pessoa compra o mesmo personagem em disputa simultânea", async () => {
+    const beforeA=await balance(a), beforeB=await balance(b);
+    const results=await Promise.all([a,b].map(user=>action(user,"buy",{name_key:characterKey(names[2] ?? "")})));
+    expect(results.filter(r=>r.ok)).toHaveLength(1);
+    expect((beforeA+beforeB)-(await balance(a)+await balance(b))).toBe(100);
+  });
+  it("reembolsa os 100 Gems efetivamente pagos antes do aumento de preço", async () => {
+    const before=await balance(a);
+    expect((await action(a,"buy",{name_key:characterKey(names[3] ?? "")})).ok).toBe(true);
+    expect(await balance(a)).toBe(before-100);
+    expect((await action(a,"divorce",{name_key:characterKey(names[3] ?? "")})).ok).toBe(true);
+    expect(await balance(a)).toBe(before);
+  });
+  it("recusar a troca não muda donos", async () => {
+    const invite=await action(a,"trade_start",{target_username:`${token}_b`,chat_id:a});
+    expect(invite.ok).toBe(true);
+    expect((await action(b,"trade_reject",{trade_id:invite.trade_id ?? "",chat_id:a})).ok).toBe(true);
+    expect((await action(b,"trade_accept",{trade_id:invite.trade_id ?? "",chat_id:a})).ok).toBe(false);
+    const {data}=await sb.from("telegram_characters").select("owner_id").eq("id",ids[0] ?? "").single();
+    expect(data?.owner_id).toBe(b);
+  });
 });

@@ -8,3 +8,7 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Parse slash-separated answer alternatives in the shared Telegram game logic so both saved game types use the same exact-match rules.
+- Unknown fixed-response messages return null; the webhook sends only recognized replies to keep ordinary chat messages silent.
+- Encode independent Typing Battle selections in the existing style text field, including both and none; opening the style menu must never write settings.

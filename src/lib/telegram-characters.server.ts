@@ -98,7 +98,7 @@ export async function handleCharacterUpdate(raw: unknown, io: CharacterTransport
       } else if (session.step === "base_price") {
         const amount = gemAmount.safeParse(text);
         if (!amount.success) { await io.send(chat.id, "Envie um valor inteiro entre 1 e 1.000.000.000 Gems."); return true; }
-        draft.base_price = amount.data; next = "photo"; prompt = "Agora envie a foto do personagem.";
+        draft["base_price"] = amount.data; next = "photo"; prompt = "Agora envie a foto do personagem.";
       } else {
         const photo = msg.photo?.at(-1)?.file_id;
         if (!photo) { await io.send(chat.id, "Envie uma foto do personagem, não um arquivo ou link."); return true; }

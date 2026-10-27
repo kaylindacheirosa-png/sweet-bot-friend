@@ -14,6 +14,11 @@ import {
   buildFinalMessage,
 } from "@/lib/telegram-quiz.server";
 import {
+  DAILY_FIRST_MESSAGE,
+  buildDailyMessage,
+  rollDailyAmount,
+} from "@/lib/telegram-daily.server";
+import {
   buildSinopseRound,
   newGame,
   applyGuess,
@@ -464,7 +469,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         }
 
         // /quiz inicia o jogo
-        // Economia persistente: cada usuário tem seu próprio saldo e cooldown de 24h.
+        // Economia persistente: saldo por usuário, daily renova todo dia à meia-noite (horário de Brasília).
+        // A dona (OWNER_ID) não tem limite diário, para testes.
         if (firstWord === "/daily") {
           const userId = message.from?.id;
           if (typeof userId !== "number") {
@@ -472,25 +478,33 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             return Response.json({ ok: true });
           }
           const username = typeof message.from?.username === "string" ? message.from.username : null;
-          const rows = await callGensRpc<{ ok: boolean; balance: number; next_daily_at: string }[]>(
-            "claim_telegram_daily",
-            { p_user_id: userId, p_username: username },
-          );
+          const amount = rollDailyAmount();
+          const rows = await callGensRpc<
+            { ok: boolean; balance: number; next_daily_at: string; is_first: boolean }[]
+          >("claim_telegram_daily", {
+            p_user_id: userId,
+            p_username: username,
+            p_amount: amount,
+            p_ignore_limit: userId === OWNER_ID,
+          });
           if (!rows?.[0]) {
-            await sendTelegramMessage(chatId, "Não consegui acessar o sistema de Gens agora. A configuração do banco precisa ser concluída.");
+            await sendTelegramMessage(chatId, "Não consegui acessar o sistema de Gems agora. Tente novamente em instantes.");
             return Response.json({ ok: true });
           }
           const result = rows[0];
           if (result.ok) {
-            await sendTelegramMessage(chatId, `💎 Parabéns! Você recebeu <b>200 Gens</b> no daily!\n\nSeu saldo agora é: <b>${result.balance} Gens</b>. Volte daqui a 24 horas para receber novamente. 💗`);
+            await sendTelegramMessage(
+              chatId,
+              result.is_first ? DAILY_FIRST_MESSAGE : buildDailyMessage(amount),
+            );
           } else {
             const remaining = Math.max(0, new Date(result.next_daily_at).getTime() - Date.now());
-            await sendTelegramMessage(chatId, `🌷 Você já resgatou seu daily!\nVocê poderá receber mais 200 Gens em <b>${formatRemaining(remaining)}</b>.\n\nSeu saldo: <b>${result.balance} Gens</b>.`);
+            await sendTelegramMessage(chatId, `🌷 Você já resgatou seu daily de hoje!\nA próxima recompensa chega à meia-noite, em <b>${formatRemaining(remaining)}</b>.\n\nSeu saldo: <b>${result.balance} Gems</b>.`);
           }
           return Response.json({ ok: true });
         }
 
-        if (firstWord === "/gens") {
+        if (firstWord === "/gens" || firstWord === "/gems") {
           const userId = message.from?.id;
           if (typeof userId !== "number") {
             await sendTelegramMessage(chatId, "Não consegui identificar sua conta do Telegram. Tente novamente.");
@@ -502,15 +516,15 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             { p_user_id: userId, p_username: username },
           );
           if (!rows?.[0]) {
-            await sendTelegramMessage(chatId, "Não consegui acessar o sistema de Gens agora. A configuração do banco precisa ser concluída.");
+            await sendTelegramMessage(chatId, "Não consegui acessar o sistema de Gems agora. Tente novamente em instantes.");
             return Response.json({ ok: true });
           }
           const result = rows[0];
           const remaining = result.next_daily_at ? new Date(result.next_daily_at).getTime() - Date.now() : 0;
           const dailyText = remaining > 0
-            ? `Daily disponível em ${formatRemaining(remaining)}.`
-            : "Seu daily de 200 Gens está disponível! Use /daily.";
-          await sendTelegramMessage(chatId, `💎 <b>Seu saldo de Gens</b>\n\nVocê tem <b>${result.balance} Gens</b>.\n${dailyText}`);
+            ? `Seu próximo daily chega à meia-noite, em ${formatRemaining(remaining)}.`
+            : "Seu daily está disponível! Use /daily para resgatar.";
+          await sendTelegramMessage(chatId, `💎 <b>Seu saldo de Gems</b>\n\nVocê tem <b>${result.balance} Gems</b>.\n${dailyText}`);
           return Response.json({ ok: true });
         }
 

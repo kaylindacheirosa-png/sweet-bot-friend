@@ -119,9 +119,15 @@ export type Database = {
     }
     Functions: {
       claim_telegram_daily: {
-        Args: { p_user_id: number; p_username?: string }
+        Args: {
+          p_amount?: number
+          p_ignore_limit?: boolean
+          p_user_id: number
+          p_username?: string
+        }
         Returns: {
           balance: number
+          is_first: boolean
           next_daily_at: string
           ok: boolean
         }[]

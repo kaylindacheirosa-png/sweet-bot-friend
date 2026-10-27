@@ -83,7 +83,7 @@ async function handleAddFlow(
       .upsert({ user_id: userId, step: "game", synopsis: null, game: null });
     await sendTelegramMessage(
       chatId,
-      "🎮 Em qual comando você quer adicionar a rodada?\n\n1 — /game_sinopse\n2 — /game_peitoral\n3 — /game_emoji\n\n(ou /cancelar)",
+      "🎮 O que você quer adicionar?\n\n1 — /game_sinopse\n2 — /game_peitoral\n3 — /game_emoji\n4 — Personagem\n\n(ou /cancelar)",
     );
     return true;
   }
@@ -385,6 +385,18 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         } catch {
           return Response.json({ ok: true, ignored: true });
         }
+
+        // Economy handlers only receive signature-verified Telegram updates.
+        // Edited messages never repeat purchases, gifts, wish toggles or trades.
+        if (update?.edited_message && !update?.message && !update?.callback_query) {
+          return Response.json({ ok: true, ignored: true });
+        }
+        const { handleCharacterUpdate } = await import("@/lib/telegram-characters.server");
+        if (await handleCharacterUpdate(update, {
+          send: sendTelegramMessage,
+          photo: sendTelegramPhoto,
+          answer: answerCallbackQuery,
+        })) return Response.json({ ok: true });
 
         // Clique em botão do quiz
         const callbackQuery = update.callback_query;

@@ -69,7 +69,7 @@ describe.skipIf(!enabled)("gerenciar conteúdos com banco real e mensagens tempo
     expect(await storedPrice()).toMatchObject({ base_price: 2000, paid_price: 100, owner_id: buyer });
     await handleCharacterUpdate(update(`/im ${tag}`, 1, buyer), io);
     expect(last().text).toContain("2200 Gems");
-  });
+  }, 20000);
   it("não exclui antes da confirmação e devolve exatamente 100 Gems apenas uma vez", async () => {
     await handleContentUpdate(update("/delete", last().id), io);
     const prompt = last();

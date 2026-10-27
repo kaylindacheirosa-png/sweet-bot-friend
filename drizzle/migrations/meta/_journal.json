@@ -43,6 +43,13 @@
       "when": 1793120262278,
       "tag": "0005_telegram_character_economy",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793121685051,
+      "tag": "0006_telegram_owner_content_management",
+      "breakpoints": true
     }
   ]
 }

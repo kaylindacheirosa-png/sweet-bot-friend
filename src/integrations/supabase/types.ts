@@ -128,6 +128,66 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_content_messages: {
+        Row: {
+          chat_id: number
+          created_at: string
+          kind: string
+          message_id: number
+          target_id: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          kind: string
+          message_id: number
+          target_id: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          kind?: string
+          message_id?: number
+          target_id?: string
+        }
+        Relationships: []
+      }
+      telegram_content_sessions: {
+        Row: {
+          chat_id: number
+          expires_at: string
+          field: string | null
+          id: string
+          kind: string
+          operation: string
+          prompt_message_id: number | null
+          target_id: string
+          user_id: number
+        }
+        Insert: {
+          chat_id: number
+          expires_at?: string
+          field?: string | null
+          id?: string
+          kind: string
+          operation: string
+          prompt_message_id?: number | null
+          target_id: string
+          user_id: number
+        }
+        Update: {
+          chat_id?: number
+          expires_at?: string
+          field?: string | null
+          id?: string
+          kind?: string
+          operation?: string
+          prompt_message_id?: number | null
+          target_id?: string
+          user_id?: number
+        }
+        Relationships: []
+      }
       telegram_economy_events: {
         Row: {
           action: string
@@ -349,6 +409,18 @@ export type Database = {
           p_event_key: string
           p_user_id: number
           p_username: string
+        }
+        Returns: Json
+      }
+      telegram_manage_content: {
+        Args: {
+          p_action: string
+          p_chat_id: number
+          p_event_key: string
+          p_prompt_id: number
+          p_session_id: string
+          p_user_id: number
+          p_value: Json
         }
         Returns: Json
       }

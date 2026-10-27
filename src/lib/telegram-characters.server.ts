@@ -56,13 +56,20 @@ export interface CharacterCard {
 export const escapeTelegram = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 export function buildCharacterCard(c: CharacterCard) {
-  const owner =
-    c.owner_id === null
-      ? "Ninguém"
-      : c.owner_username
-        ? `@${escapeTelegram(c.owner_username)}`
-        : `<a href="tg://user?id=${c.owner_id}">Usuário</a>`;
-  return `${escapeTelegram(c.name)} • #${c.position}\n\nㅤ⤷﹒꒰<tg-emoji emoji-id="6089093702406378434">🌸</tg-emoji>﹒${escapeTelegram(c.work)}﹒𖦹\n\n୨﹒𓏵︐﹕<tg-emoji emoji-id="5375296873982604963">💎</tg-emoji> ${c.price} gens\n\n﹒<tg-emoji emoji-id="5397931489071476571">💍</tg-emoji>ᰍ Casado com: ${owner}`;
+  const price = c.price.toLocaleString("pt-BR", { useGrouping: false });
+  const position = c.position.toLocaleString("pt-BR", { useGrouping: false });
+  const lines = [
+    `${escapeTelegram(c.name.trim())} • #${position}`,
+    `⤷﹒꒰<tg-emoji emoji-id="6089093702406378434">🌸</tg-emoji>﹒${escapeTelegram(c.work.trim())}﹒𖦹`,
+    `୨﹒𓏵︐﹕<tg-emoji emoji-id="5375296873982604963">💎</tg-emoji> ${price} Gems`,
+  ];
+  if (c.owner_id !== null) {
+    const owner = c.owner_username
+      ? `@${escapeTelegram(c.owner_username)}`
+      : `<a href="tg://user?id=${c.owner_id}">Usuário</a>`;
+    lines.push(`﹒<tg-emoji emoji-id="5397931489071476571">💍</tg-emoji>ᰍ Casado com: ${owner}`);
+  }
+  return lines.join("\n");
 }
 export interface CharacterTransport {
   send: (

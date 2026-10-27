@@ -38,7 +38,7 @@ async function db() {
   return supabaseAdmin;
 }
 
-async function loadRounds(game: "sinopse" | "peitoral") {
+async function loadRounds(game: "sinopse" | "peitoral" | "emoji") {
   const { data, error } = await (
     await db()
   )

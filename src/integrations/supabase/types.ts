@@ -65,6 +65,30 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_gens: {
+        Row: {
+          balance: number
+          last_daily_at: string | null
+          telegram_user_id: number
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          balance?: number
+          last_daily_at?: string | null
+          telegram_user_id: number
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          balance?: number
+          last_daily_at?: string | null
+          telegram_user_id?: number
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       typing_battle_settings: {
         Row: {
           chat_id: number
@@ -94,7 +118,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_telegram_daily: {
+        Args: { p_user_id: number; p_username?: string }
+        Returns: {
+          balance: number
+          next_daily_at: string
+          ok: boolean
+        }[]
+      }
+      get_telegram_gens: {
+        Args: { p_user_id: number; p_username?: string }
+        Returns: {
+          balance: number
+          next_daily_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

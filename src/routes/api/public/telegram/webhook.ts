@@ -346,28 +346,14 @@ function formatRemaining(ms: number): string {
   return hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
 }
 
-async function callGensRpc<T>(rpcName: string, payload: Record<string, unknown>): Promise<T | null> {
-  const supabaseUrl = process.env["GENS_SUPABASE_URL"] ?? process.env["SUPABASE_URL"] ?? process.env["VITE_SUPABASE_URL"];
-  const serviceKey = process.env["GENS_SUPABASE_SERVICE_ROLE_KEY"] ?? process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? process.env["SUPABASE_SERVICE_KEY"];
-  if (!supabaseUrl || !serviceKey) {
-    console.error("Gens commands require SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
+async function callGensRpc<T>(rpcName: "claim_telegram_daily" | "get_telegram_gens", payload: Record<string, unknown>): Promise<T | null> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin as any).rpc(rpcName, payload);
+  if (error) {
+    console.error(`Gens ${rpcName} failed: ${error.message}`);
     return null;
   }
-
-  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${rpcName}`, {
-    method: "POST",
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    console.error(`Supabase ${rpcName} failed [${response.status}]: ${await response.text()}`);
-    return null;
-  }
-  return await response.json() as T;
+  return data as T;
 }
 
 export const Route = createFileRoute("/api/public/telegram/webhook")({

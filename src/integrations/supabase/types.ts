@@ -236,6 +236,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_pending_confirmations: {
+        Row: {
+          action: string
+          args: Json
+          chat_id: number
+          created_at: string
+          expires_at: string
+          id: string
+          status: string
+          user_id: number
+        }
+        Insert: {
+          action: string
+          args?: Json
+          chat_id: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          user_id: number
+        }
+        Update: {
+          action?: string
+          args?: Json
+          chat_id?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          user_id?: number
+        }
+        Relationships: []
+      }
       telegram_trades: {
         Row: {
           chat_id: number
@@ -243,8 +276,10 @@ export type Database = {
           expires_at: string
           id: string
           proposer_character: string | null
+          proposer_confirmed: boolean
           proposer_id: number
           recipient_character: string | null
+          recipient_confirmed: boolean
           recipient_id: number
           status: string
         }
@@ -254,8 +289,10 @@ export type Database = {
           expires_at?: string
           id?: string
           proposer_character?: string | null
+          proposer_confirmed?: boolean
           proposer_id: number
           recipient_character?: string | null
+          recipient_confirmed?: boolean
           recipient_id: number
           status?: string
         }
@@ -265,8 +302,10 @@ export type Database = {
           expires_at?: string
           id?: string
           proposer_character?: string | null
+          proposer_confirmed?: boolean
           proposer_id?: number
           recipient_character?: string | null
+          recipient_confirmed?: boolean
           recipient_id?: number
           status?: string
         }

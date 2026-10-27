@@ -8,7 +8,14 @@ export const characterKey = (name: string) =>
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ");
-export const gemAmount = z.coerce.number().int().min(1).max(1_000_000_000);
+export const gemAmount = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const text = value.trim();
+  // In Brazilian notation dots separate thousands, never fractional Gems.
+  if (/^\d{1,3}(?:\.\d{3})+$/.test(text)) return Number(text.replace(/\./g, ""));
+  if (/^\d+$/.test(text)) return Number(text);
+  return value;
+}, z.number().int().min(1).max(1_000_000_000));
 const field = z.string().trim().min(1).max(120);
 export const characterDraft = z.object({
   name: field,

@@ -1,96 +1,109 @@
-// Jogo "Adivinhe pela sinopse": o bot manda uma sinopse e o usuário responde digitando.
-// Sem banco de dados: rodada e pontos ficam escritos na própria mensagem do bot
-// (linha "Rodada X de Y · Pontos: Z"), e o usuário responde a ela (force_reply).
+// Jogo "Adivinhe pela sinopse" (/game_sinopse).
+// Palpites errados não geram nenhuma saída. Rodadas sorteadas em ordem aleatória.
+// Sem banco de dados: o jogo de cada chat fica na memória do servidor.
 
 export interface SinopseRound {
   synopsis: string;
-  answers: string[]; // respostas aceitas (comparação sem acentos/maiúsculas)
+  answers: string[];
   display: string;
+  /** file_id de foto do Telegram (rodadas com imagem). */
+  photo?: string;
 }
 
-// Jogo com 13 rodadas — obras de boys love. Trocar os placeholders conforme o usuário enviar.
+export interface Player {
+  id: number;
+  name: string;
+  username?: string;
+  points: number;
+}
+
+export interface SinopseState {
+  /** Índices de SINOPSE_ROUNDS na ordem sorteada. */
+  order: number[];
+  /** Posição atual dentro de `order`. */
+  position: number;
+  players: Player[];
+  /** Rodadas deste jogo (padrão: SINOPSE_ROUNDS). */
+  rounds?: SinopseRound[];
+  /** Tipo do jogo quando usa rodadas próprias (peitoral, emoji). */
+  game?: "peitoral" | "emoji";
+}
+
+function roundsOf(state: SinopseState): SinopseRound[] {
+  return state.rounds ?? SINOPSE_ROUNDS;
+}
+
+/** Converte linhas salvas em rodadas. */
+export function toRounds(
+  extra: { synopsis: string; answer: string; photo_file_id?: string | null }[],
+): SinopseRound[] {
+  return extra.map((r) => ({
+    synopsis: r.synopsis ? `"${escapeHtml(r.synopsis)}"` : "",
+    answers: parseAnswers(r.answer),
+    display: r.answer,
+    ...(r.photo_file_id ? { photo: r.photo_file_id } : {}),
+  }));
+}
+
+export const MAX_ROUNDS = 13;
+
 export const SINOPSE_ROUNDS: SinopseRound[] = [
   {
     synopsis:
-      '"Anos depois na universidade, o ômega se reencontra com seu antigo professor. Descobrindo a verdade sobre ele ser...uma alfa!!"',
-    answers: [], // TODO: definir a resposta certa da rodada 1
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 2 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 3 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 4 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 5 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 6 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 7 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 8 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 9 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 10 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 11 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 12 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
-  },
-  {
-    synopsis: "Sinopse da rodada 13 será adicionada em breve.",
-    answers: [],
-    display: "A definir",
+      '"Anos depois na universidade, o ômega se reencontra com seu antigo professor. Descobrindo a verdade sobre ele ser...um alfa!!"',
+    answers: ["Alpha trauma"],
+    display: "Alpha trauma",
   },
 ];
 
-const MARKER = /Rodada (\d+) de (\d+) · Pontos: (\d+)/;
+const BASE_ROUND_COUNT = SINOPSE_ROUNDS.length;
 
-function normalize(s: string): string {
+/** Junta as rodadas fixas com as adicionadas pelo /add. */
+export function setExtraRounds(extra: { synopsis: string; answer: string }[]): void {
+  SINOPSE_ROUNDS.splice(
+    BASE_ROUND_COUNT,
+    SINOPSE_ROUNDS.length - BASE_ROUND_COUNT,
+    ...extra.map((r) => ({
+      synopsis: `"${escapeHtml(r.synopsis)}"`,
+      answers: parseAnswers(r.answer),
+      display: r.answer,
+    })),
+  );
+}
+
+export function normalize(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-// Números em negrito (𝗥𝗢𝗗𝗗𝗗 𝟭), no mesmo estilo da mensagem do usuário
+/** A barra separa alternativas completas, não partes de uma mesma resposta. */
+export function parseAnswers(answer: string): string[] {
+  return answer
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function isCorrectAnswer(roundIndex: number, guess: string): boolean {
+  const round = SINOPSE_ROUNDS[roundIndex];
+  if (!round) return false;
+  const g = normalize(guess);
+  if (!g) return false;
+  return round.answers.some((a) => normalize(a) === g);
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 const BOLD_DIGITS = ["𝟬", "𝟭", "𝟮", "𝟯", "𝟰", "𝟱", "𝟲", "𝟳", "𝟴", "𝟵"];
 function boldNum(n: number): string {
   return String(n)
@@ -99,39 +112,120 @@ function boldNum(n: number): string {
     .join("");
 }
 
-export function buildSinopseRound(roundIndex: number, score: number): string {
-  const round = SINOPSE_ROUNDS[roundIndex]!;
+/** Sorteia até MAX_ROUNDS rodadas (só as que têm resposta). */
+export function newGame(
+  random: () => number = Math.random,
+  rounds?: SinopseRound[],
+  game?: "peitoral" | "emoji",
+): SinopseState {
+  const pool = (rounds ?? SINOPSE_ROUNDS)
+    .map((r, i) => (r.answers.length ? i : -1))
+    .filter((i) => i >= 0);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+  }
+  return {
+    order: pool.slice(0, MAX_ROUNDS),
+    position: 0,
+    players: [],
+    ...(rounds ? { rounds } : {}),
+    ...(game ? { game } : {}),
+  };
+}
+
+export function currentRound(state: SinopseState): SinopseRound {
+  return roundsOf(state)[currentRoundIndex(state)]!;
+}
+
+export function currentRoundIndex(state: SinopseState): number {
+  return state.order[state.position]!;
+}
+
+export function buildSinopseRound(state: SinopseState): string {
+  const round = currentRound(state);
+  const game = state.game ?? (state.rounds ? "peitoral" : "sinopse");
+  const titleEmoji =
+    game === "peitoral"
+      ? '<tg-emoji emoji-id="5343648776101845769">💗</tg-emoji>'
+      : game === "emoji"
+        ? '<tg-emoji emoji-id="5251430025755903710">💗</tg-emoji>'
+        : '<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji>';
+  const question =
+    game === "peitoral"
+      ? 'Que personagem ou obra é esses seios suculentos? <tg-emoji emoji-id="6042098256152894179">💭</tg-emoji>ᰍ﹒'
+      : game === "emoji"
+        ? 'Que obra esses emojis representam? ᰍ﹒<tg-emoji emoji-id="5003988713496118896">💭</tg-emoji>'
+        : 'Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>';
   return (
-    `.﹒୨<tg-emoji emoji-id="5429638011392377649">💗</tg-emoji> 𝗥𝗢𝗗𝗗𝗗 ${boldNum(roundIndex + 1)}\n\n` +
-    `<i>${round.synopsis}</i>\n\n` +
-    `ıl 𓏴ᩙᡴ﹒Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>\n\n` +
-    `Rodada ${roundIndex + 1} de ${SINOPSE_ROUNDS.length} · Pontos: ${score}`
+    `.﹒୨${titleEmoji} 𝗥𝗢𝗗𝗔𝗗𝗔 ${boldNum(state.position + 1)}\n\n` +
+    (round.synopsis ? `<i>${round.synopsis}</i>\n\n` : "") +
+    `ıl 𓏴ᩙᡴ﹒${question}`
   );
 }
 
-/** Lê rodada e pontos da mensagem do bot que o usuário respondeu. */
-export function parseSinopseState(botText: string | undefined): { roundIndex: number; score: number } | null {
-  if (!botText) return null;
-  const m = botText.match(MARKER);
-  if (!m) return null;
-  const roundIndex = Number(m[1]) - 1;
-  const score = Number(m[3]);
-  if (roundIndex < 0 || roundIndex >= SINOPSE_ROUNDS.length) return null;
-  return { roundIndex, score };
+export function mergeParticipants(
+  state: SinopseState,
+  users: { id: number; name: string; username?: string }[],
+): SinopseState {
+  const players = state.players.map((p) => ({ ...p }));
+  for (const u of users) {
+    const ex = players.find((p) => p.id === u.id);
+    if (ex) {
+      ex.name = u.name;
+      if (u.username) ex.username = u.username;
+    } else players.push({ ...u, points: 0 });
+  }
+  return { ...state, players };
 }
 
-export function evaluateSinopse(roundIndex: number, score: number, guess: string) {
-  const round = SINOPSE_ROUNDS[roundIndex]!;
-  const correct = round.answers.some((a) => normalize(a) === normalize(guess));
-  const newScore = correct ? score + 1 : score;
-  const feedback = correct
-    ? `✅ Acertou! Era <b>${round.display}</b>. (+1 ponto)`
-    : `❌ Não foi dessa vez. A resposta era <b>${round.display}</b>.`;
-  return { feedback, newScore, isLast: roundIndex === SINOPSE_ROUNDS.length - 1 };
+export type GuessResult =
+  { correct: false } | { correct: true; state: SinopseState; finished: boolean; display: string };
+
+export function applyGuess(
+  state: SinopseState,
+  user: { id: number; name: string; username?: string },
+  guess: string,
+): GuessResult {
+  const idx = currentRoundIndex(state);
+  const round = roundsOf(state)[idx];
+  const g = normalize(guess);
+  if (!round || !g || !round.answers.some((a) => normalize(a) === g)) return { correct: false };
+  const merged = mergeParticipants(state, [user]);
+  merged.players.find((p) => p.id === user.id)!.points += 1;
+  const next = state.position + 1;
+  return {
+    correct: true,
+    state: { ...merged, position: next },
+    finished: next >= state.order.length,
+    display: round.display,
+  };
 }
 
-export function buildSinopseFinal(score: number): string {
-  const total = SINOPSE_ROUNDS.length;
-  const medal = score === total ? "🏆" : score >= total / 2 ? "🎉" : "💪";
-  return `${medal} <b>Fim de jogo!</b> Você fez <b>${score} de ${total}</b> pontos.\n\nJogue de novo com /game_sinopse`;
+export function skipRound(state: SinopseState): { state: SinopseState; finished: boolean } {
+  const next = state.position + 1;
+  return { state: { ...state, position: next }, finished: next >= state.order.length };
+}
+
+export function buildCorrectMessage(name: string, display: string): string {
+  return `✅️﹔Ponto para <b>${escapeHtml(name)}</b>! Era <b>${escapeHtml(display)}</b>. ഉ﹒<tg-emoji emoji-id="5465659176254458158">✨</tg-emoji> 𑁯ᰍ`;
+}
+
+function playerLabel(p: Player): string {
+  return p.username
+    ? `@${escapeHtml(p.username)}`
+    : `<a href="tg://user?id=${p.id}">${escapeHtml(p.name)}</a>`;
+}
+
+export function buildSinopseFinal(players: Player[]): string {
+  const ranking = [...players].sort((a, b) => b.points - a.points);
+  const medals = ["🥇", "🥈", "🥉"];
+  const header = `◟ㆍPlacar <tg-emoji emoji-id="5422546251587527850">🏆</tg-emoji>𑁯`;
+  const lines = ranking.length
+    ? ranking.map(
+        (p, i) =>
+          `ಲ ${medals[i] ?? ". "}${playerLabel(p)}﹕${p.points} ponto${p.points === 1 ? "" : "s"}﹒ಿ`,
+      )
+    : ["Ninguém participou desta vez."];
+  return `${header}\n\n${lines.join("\n")}`;
 }

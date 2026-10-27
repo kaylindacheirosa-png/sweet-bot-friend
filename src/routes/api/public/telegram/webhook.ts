@@ -168,8 +168,8 @@ function formatRemaining(ms: number): string {
 }
 
 async function callGensRpc<T>(rpcName: string, payload: Record<string, unknown>): Promise<T | null> {
-  const supabaseUrl = process.env["SUPABASE_URL"] ?? process.env["VITE_SUPABASE_URL"];
-  const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? process.env["SUPABASE_SERVICE_KEY"];
+  const supabaseUrl = process.env["GENS_SUPABASE_URL"] ?? process.env["SUPABASE_URL"] ?? process.env["VITE_SUPABASE_URL"];
+  const serviceKey = process.env["GENS_SUPABASE_SERVICE_ROLE_KEY"] ?? process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? process.env["SUPABASE_SERVICE_KEY"];
   if (!supabaseUrl || !serviceKey) {
     console.error("Gens commands require SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
     return null;

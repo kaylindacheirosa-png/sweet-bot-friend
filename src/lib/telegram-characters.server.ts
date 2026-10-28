@@ -138,7 +138,7 @@ export async function handleCharacterUpdate(
   };
   const sendResult = async (name: string, args: Record<string, Json | undefined> = {}) => {
     const r = await action(name, args);
-    const text = formatCharacterResult(r as ActionResult & Record<string, unknown>);
+    const text = formatCharacterResult({ sender_id: actor.id, ...r });
     const extra = r as ActionResult & { confirmation_id?: string; code?: string };
     let keyboard: { text: string; callback_data: string }[][] | undefined;
     if (extra.code === "confirm" && extra.confirmation_id)

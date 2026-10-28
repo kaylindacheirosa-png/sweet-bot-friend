@@ -118,14 +118,37 @@ export async function handleCharacterUpdate(
   };
   const sendResult = async (name: string, args: Record<string, Json | undefined> = {}) => {
     const r = await action(name, args);
-    if (r.message) await io.send(chat.id, escapeTelegram(r.message));
+    const text = formatCharacterResult(r as ActionResult & Record<string, unknown>);
+    const extra = r as ActionResult & { confirmation_id?: string; code?: string };
+    let keyboard: { text: string; callback_data: string }[][] | undefined;
+    if (extra.code === "confirm" && extra.confirmation_id)
+      keyboard = [
+        [
+          { text: "✅ Confirmar", callback_data: `confirm:yes:${extra.confirmation_id}` },
+          { text: "❌ Cancelar", callback_data: `confirm:no:${extra.confirmation_id}` },
+        ],
+      ];
+    else if (extra.code === "trade_confirm" && r.trade_id)
+      keyboard = [[{ text: "✅ Confirmar troca", callback_data: `trade:confirm:${r.trade_id}` }]];
+    if (text) await io.send(chat.id, text, keyboard);
     return r;
   };
   try {
     if (cb?.data.startsWith("trade:")) {
       await io.answer(cb.id);
-      const match = /^trade:(accept|reject):([0-9a-f-]{36})$/.exec(cb.data);
+      const match = /^trade:(accept|reject|confirm):([0-9a-f-]{36})$/.exec(cb.data);
       if (match) await sendResult(`trade_${match[1]}`, { trade_id: match[2], chat_id: chat.id });
+      return true;
+    }
+    if (cb?.data.startsWith("confirm:")) {
+      await io.answer(cb.id);
+      const match = /^confirm:(yes|no):([0-9a-f-]{36})$/.exec(cb.data);
+      if (match)
+        await sendResult("confirm", {
+          confirmation_id: match[2],
+          decision: match[1],
+          chat_id: chat.id,
+        });
       return true;
     }
     if (!msg) return false;

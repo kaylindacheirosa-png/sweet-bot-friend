@@ -88,6 +88,26 @@ export interface CharacterTransport {
   answer: (callback: string) => Promise<unknown>;
 }
 type ActionResult = { ok: boolean; message?: string; trade_id?: string };
+const userTag = (username: unknown, id: unknown) =>
+  typeof username === "string" && username
+    ? `@${escapeTelegram(username)}`
+    : `<a href="tg://user?id=${Number(id)}">Usuário</a>`;
+/** Turns an economy result into the owner's Telegram HTML text. */
+export function formatCharacterResult(r: Record<string, unknown>): string {
+  const name = escapeTelegram(String(r["character_name"] ?? ""));
+  switch (r["code"]) {
+    case "insufficient":
+      return `<tg-emoji emoji-id="5174748216524014435">💔</tg-emoji>﹕Casório negado! Você não tem saldo suficiente para esse casamento. Seu saldo atual é ${Number(r["balance"])} !!`;
+    case "married":
+      return `<tg-emoji emoji-id="5456200249519405824">💍</tg-emoji>   ׅ    Parabéns!! Seu Casamento com <b>${name}</b> foi realizado com sucesso! Esse matrimônio foi custado ${Number(r["price"])} Gems do seu saldo. 〣﹒ꮼ ﹒`;
+    case "divorced":
+      return `<tg-emoji emoji-id="5174748216524014435">💔</tg-emoji> . O divórcio com <b>${name}</b> foi concluído.`;
+    case "gift":
+      return `<tg-emoji emoji-id="5269464520417363323">🎁</tg-emoji>ㅤִㅤ୨ Doação Concluída! ${userTag(r["sender_username"], r["sender_id"])} enviou ${Number(r["amount"])} Gems para ${userTag(r["target_username"], r["target_id"])} como presente!`;
+    default:
+      return typeof r["message"] === "string" ? escapeTelegram(r["message"]) : "";
+  }
+}
 export async function handleCharacterUpdate(
   raw: unknown,
   io: CharacterTransport,
@@ -253,7 +273,9 @@ export async function handleCharacterUpdate(
       await io.send(chat.id, prompt);
       return true;
     }
-    if (["/im", "/wish", "/casar", "/divórcio", "/divorcio"].includes(command)) {
+    if (
+      ["/im", "/wish", "/casar", "/marry", "/divórcio", "/divorcio", "/divorce"].includes(command)
+    ) {
       if (command === "/wish" && !argument) {
         const { data, error } = await sb
           .from("telegram_wishes")
@@ -298,9 +320,13 @@ export async function handleCharacterUpdate(
             await recordContentMessage(chat.id, result, "character", c.id);
           }
         }
-      } else
-        await sendResult(command === "/wish" ? "wish" : command === "/casar" ? "buy" : "divorce", {
-          name_key: characterKey(argument),
+      } else if (command === "/wish")
+        await sendResult("wish", { name_key: characterKey(argument) });
+      else
+        await sendResult("confirm_request", {
+          action: ["/casar", "/marry"].includes(command) ? "buy" : "divorce",
+          chat_id: chat.id,
+          args: { name_key: characterKey(argument) },
         });
       return true;
     }
@@ -313,10 +339,14 @@ export async function handleCharacterUpdate(
           "Responda à mensagem de outra pessoa com /dar quantidade (ex.: /dar 100).",
         );
       else
-        await sendResult("give", {
-          target_id: target.id,
-          target_username: target.username ?? null,
-          amount: amount.data,
+        await sendResult("confirm_request", {
+          action: "give",
+          chat_id: chat.id,
+          args: {
+            target_id: target.id,
+            target_username: target.username ?? null,
+            amount: amount.data,
+          },
         });
       return true;
     }

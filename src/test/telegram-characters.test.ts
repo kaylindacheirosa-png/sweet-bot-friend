@@ -54,3 +54,22 @@ describe("entradas dos personagens", () => {
     ).toBe(false);
   });
 });
+
+import { formatCharacterResult } from "@/lib/telegram-characters.server";
+describe("mensagens da economia", () => {
+  it("casório negado mostra o saldo atual", () => {
+    expect(formatCharacterResult({ code: "insufficient", balance: 40 })).toContain(
+      "Seu saldo atual é 40 !!",
+    );
+  });
+  it("casamento mostra nome em negrito e preço descontado", () => {
+    const t = formatCharacterResult({ code: "married", character_name: "Kai", price: 2000 });
+    expect(t).toContain("<b>Kai</b>");
+    expect(t).toContain("custado 2000 Gems");
+  });
+  it("doação cita remetente, quantidade e destinatário", () => {
+    expect(
+      formatCharacterResult({ code: "gift", amount: 50, sender_username: "ana", target_username: "bia" }),
+    ).toContain("@ana enviou 50 Gems para @bia");
+  });
+});

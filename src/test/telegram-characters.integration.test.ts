@@ -195,6 +195,10 @@ describe.skipIf(!enabled)("economia real de personagens (dados temporários)", (
     ).toBe(false);
     await action(a, "trade_select", { name_key: characterKey(names[0] ?? ""), chat_id: a });
     await action(b, "trade_select", { name_key: characterKey(names[1] ?? ""), chat_id: a });
+    const pending = await sb.from("telegram_characters").select("owner_id").eq("id", ids[0] ?? "").single();
+    expect(pending.data?.owner_id).toBe(a);
+    await action(a, "trade_confirm", { trade_id: invite.trade_id ?? "", chat_id: a });
+    await action(b, "trade_confirm", { trade_id: invite.trade_id ?? "", chat_id: a });
     const { data } = await sb
       .from("telegram_characters")
       .select("id,owner_id")

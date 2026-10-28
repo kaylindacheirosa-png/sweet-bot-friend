@@ -554,9 +554,9 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           const result = rows[0];
           const remaining = result.next_daily_at ? new Date(result.next_daily_at).getTime() - Date.now() : 0;
           const dailyText = remaining > 0
-            ? `Seu próximo daily chega à meia-noite, em ${formatRemaining(remaining)}.`
-            : "Seu daily está disponível! Use /daily para resgatar.";
-          await sendTelegramMessage(chatId, `💎 <b>Seu saldo de Gems</b>\n\nVocê tem <b>${result.balance} Gems</b>.\n${dailyText}`);
+            ? `Seu próximo daily chega à ${formatRemaining(remaining)}.`
+            : "Seu próximo daily já está disponível! Use /daily.";
+          await sendTelegramMessage(chatId, `⟡  . <tg-emoji emoji-id="5221936025772789058">💎</tg-emoji>  Você tem ${result.balance} Gems.\n\n${dailyText}`);
           return Response.json({ ok: true });
         }
 

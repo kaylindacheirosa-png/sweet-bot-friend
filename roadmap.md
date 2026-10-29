@@ -1,5 +1,6 @@
 # Bot Telegram
-- [ ] Fazer Typing Battle enviar rodadas automáticas e reconhecer o primeiro acerto, com frequência e estilos salvos.
+- [x] Implementar Typing Battle automático com frequência e estilos salvos, rodada persistida e primeiro vencedor atômico; 34 testes passaram e uma rodada foi enviada ao Telegram.
+- [ ] Disponibilizar o Typing Battle contínuo no endereço público: aguarda publicação solicitada pela dona; endereço remoto atual retorna 404 para a nova função agendada.
 - [x] Criar /delete e /editar exclusivos da dona, por resposta ao perfil/rodada, com confirmação de exclusão; 37 testes passaram, incluindo banco real e reembolso único. Envio em conversa real do Telegram não verificado.
 - [x] Cadastrar personagens com foto e mostrar /im com posição e preço por interesse.
 - [x] Implementar /wish (até 5), /casar, /dar, /trocar com aceite e /divórcio com reembolso integral.

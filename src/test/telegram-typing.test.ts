@@ -37,7 +37,11 @@ async function check<T>(operation: PromiseLike<{ data: T; error: unknown }>) {
   if (error) throw error;
   return data;
 }
-async function active() { return await check(sb.from("telegram_typing_rounds").select("*").eq("chat_id", chat).single()); }
+async function active() {
+  const row = await check(sb.from("telegram_typing_rounds").select("*").eq("chat_id", chat).single());
+  if (!row) throw new Error("Missing active round");
+  return row;
+}
 async function configure(style: string, frequency_minutes = 30, enabled = true) {
   await check(sb.from("typing_battle_settings").upsert({ chat_id: chat, enabled, style, frequency_minutes }));
 }
@@ -65,6 +69,7 @@ describe.skipIf(!enabled)("Typing Battle com banco real, sem enviar mensagens re
       await dispatchTypingBattles(io, chat);
       const row = await active();
       const settings = await check(sb.from("typing_battle_settings").select("next_run_at").eq("chat_id", chat).single());
+      if (!settings) throw new Error("Missing settings");
       expect(new Date(settings.next_run_at).getTime() - new Date(row.started_at).getTime()).toBe(minutes * 60000);
     });
   }

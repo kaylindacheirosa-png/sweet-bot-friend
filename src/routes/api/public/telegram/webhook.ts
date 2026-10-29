@@ -440,18 +440,20 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await answerCallbackQuery(callbackQuery.id);
           if (typeof msg?.chat?.id === "number") {
             const sb = await db();
-            const { data: row } = await sb
+            const { data: row, error: settingsError } = await sb
               .from("typing_battle_settings")
               .select("enabled, frequency_minutes, style")
               .eq("chat_id", msg.chat.id)
               .maybeSingle();
+            if (settingsError) throw settingsError;
             let s = row ?? { enabled: false, frequency_minutes: 30, style: "sinopse" };
             const action = callbackQuery.data.slice(7);
             if (action === "toggle" || action === "freq" || action === "style:sinopse" || action === "style:peitoral") {
               s = applyTypingAction(s, action);
-              await sb
+              const { error: saveError } = await sb
                 .from("typing_battle_settings")
                 .upsert({ chat_id: msg.chat.id, ...s, updated_at: new Date().toISOString() });
+              if (saveError) throw saveError;
             }
             const page = buildTypingPage(s, action === "style" || action.startsWith("style:"));
             await callTelegram("editMessageText", {
@@ -461,6 +463,10 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               parse_mode: "HTML",
               reply_markup: { inline_keyboard: page.keyboard },
             });
+            if (s.enabled && (action === "toggle" || action === "freq" || action.startsWith("style:"))) {
+              const { dispatchTypingBattles } = await import("@/lib/telegram-typing.server");
+              await dispatchTypingBattles({ send: sendTelegramMessage, photo: sendTelegramPhoto }, msg.chat.id);
+            }
           }
           return Response.json({ ok: true });
         }
@@ -589,7 +595,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await sendTelegramPhoto(chatId, PEITORAL_IMAGE_URL, PEITORAL_INTRO_MESSAGE);
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           wrongGuessers.delete(chatId);
-          const game = newGame(Math.random, toRounds(await loadRounds("peitoral")));
+          const game = newGame(Math.random, toRounds(await loadRounds("peitoral")), "peitoral");
           if (game.order.length === 0) {
             await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
           } else await postSinopseRound(chatId, game);
@@ -626,6 +632,10 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         // Mensagem normal: se houver jogo ativo, é um palpite (erros ficam em silêncio)
         if (photoId && !message.text) return Response.json({ ok: true, ignored: true });
         if (!text.trim().startsWith("/")) {
+          const { handleTypingGuess } = await import("@/lib/telegram-typing.server");
+          if (await handleTypingGuess(update, { send: sendTelegramMessage, photo: sendTelegramPhoto })) {
+            return Response.json({ ok: true });
+          }
           const active = activeGames.get(chatId);
           if (active) {
             const round = currentRound(active);

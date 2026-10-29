@@ -340,6 +340,60 @@ export type Database = {
           },
         ]
       }
+      telegram_typing_rounds: {
+        Row: {
+          chat_id: number
+          expires_at: string
+          game: string
+          message_id: number | null
+          round_id: string | null
+          snapshot: Json
+          started_at: string
+          status: string
+          token: string
+          winner_id: number | null
+        }
+        Insert: {
+          chat_id: number
+          expires_at: string
+          game: string
+          message_id?: number | null
+          round_id?: string | null
+          snapshot: Json
+          started_at?: string
+          status?: string
+          token?: string
+          winner_id?: number | null
+        }
+        Update: {
+          chat_id?: number
+          expires_at?: string
+          game?: string
+          message_id?: number | null
+          round_id?: string | null
+          snapshot?: Json
+          started_at?: string
+          status?: string
+          token?: string
+          winner_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_typing_rounds_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: true
+            referencedRelation: "typing_battle_settings"
+            referencedColumns: ["chat_id"]
+          },
+          {
+            foreignKeyName: "telegram_typing_rounds_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "sinopse_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_wishes: {
         Row: {
           character_id: string
@@ -378,6 +432,7 @@ export type Database = {
           chat_id: number
           enabled: boolean
           frequency_minutes: number
+          next_run_at: string
           style: string
           updated_at: string
         }
@@ -385,6 +440,7 @@ export type Database = {
           chat_id: number
           enabled?: boolean
           frequency_minutes?: number
+          next_run_at?: string
           style?: string
           updated_at?: string
         }
@@ -392,6 +448,7 @@ export type Database = {
           chat_id?: number
           enabled?: boolean
           frequency_minutes?: number
+          next_run_at?: string
           style?: string
           updated_at?: string
         }
@@ -460,6 +517,24 @@ export type Database = {
           p_session_id: string
           p_user_id: number
           p_value: Json
+        }
+        Returns: Json
+      }
+      telegram_typing_claim: {
+        Args: {
+          p_chat_id: number
+          p_message_date: number
+          p_token: string
+          p_user_id: number
+        }
+        Returns: boolean
+      }
+      telegram_typing_prepare: {
+        Args: {
+          p_chat_id: number
+          p_game: string
+          p_round_id: string
+          p_snapshot: Json
         }
         Returns: Json
       }

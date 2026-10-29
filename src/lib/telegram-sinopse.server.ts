@@ -147,7 +147,7 @@ export function currentRoundIndex(state: SinopseState): number {
 
 export function buildSinopseRound(state: SinopseState): string {
   const round = currentRound(state);
-  const game = state.game ?? (state.rounds ? "peitoral" : "sinopse");
+  const game = state.game ?? "sinopse";
   const titleEmoji =
     game === "peitoral"
       ? '<tg-emoji emoji-id="5343648776101845769">💗</tg-emoji>'

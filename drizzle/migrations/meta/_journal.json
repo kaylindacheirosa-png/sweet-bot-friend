@@ -57,6 +57,13 @@
       "when": 1793124770219,
       "tag": "0007_character_confirmations",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793279976633,
+      "tag": "0008_typing_battle_runtime",
+      "breakpoints": true
     }
   ]
 }

@@ -638,7 +638,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         // Mensagem normal: se houver jogo ativo, é um palpite (erros ficam em silêncio)
         if (photoId && !message.text) return Response.json({ ok: true, ignored: true });
         if (!text.trim().startsWith("/")) {
-          const { handleTypingGuess } = await import("@/lib/telegram-typing.server");
+          const { handleTypingGuess, typingTransport } = await import("@/lib/telegram-typing.server");
           if (await handleTypingGuess(update, typingTransport)) {
             return Response.json({ ok: true });
           }

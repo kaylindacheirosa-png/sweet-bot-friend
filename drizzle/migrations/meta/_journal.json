@@ -64,6 +64,13 @@
       "when": 1793279976633,
       "tag": "0008_typing_battle_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793363288477,
+      "tag": "0009_typing_minigame_scores",
+      "breakpoints": true
     }
   ]
 }

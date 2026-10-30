@@ -44,6 +44,7 @@ async function active() {
 }
 async function configure(style: string, frequency_minutes = 30, enabled = true) {
   await check(sb.from("typing_battle_settings").upsert({ chat_id: chat, enabled, style, frequency_minutes }));
+  if (enabled) await check(sb.from("typing_battle_settings").update({ next_run_at: new Date(0).toISOString() }).eq("chat_id", chat));
 }
 function guess(text: string, user = 123, date = Math.floor(Date.now() / 1000)) {
   return { message: { text, date, chat: { id: chat }, from: { id: user, first_name: "Teste" } } };
@@ -63,6 +64,22 @@ describe.skipIf(!enabled)("Typing Battle com banco real, sem enviar mensagens re
     expect(outputs).toHaveLength(1);
   });
   for (const minutes of [30, 60, 120, 300]) {
+    it(`mudar a frequência para ${minutes} minutos não envia nem cancela o minigame atual`, async () => {
+      await configure("sinopse", minutes === 30 ? 60 : 30);
+      await dispatchTypingBattles(io, chat);
+      const previous = await active();
+      const before = outputs.length;
+      const changedAt = Date.now();
+      await check(sb.from("typing_battle_settings").update({ frequency_minutes: minutes }).eq("chat_id", chat));
+      expect(await dispatchTypingBattles(io, chat)).toEqual({ sent: 0 });
+      expect(outputs).toHaveLength(before);
+      expect((await active()).token).toBe(previous.token);
+      const settings = await check(sb.from("typing_battle_settings").select("next_run_at").eq("chat_id", chat).single());
+      if (!settings) throw new Error("Missing settings");
+      const delay = new Date(settings.next_run_at).getTime() - changedAt;
+      expect(delay).toBeGreaterThanOrEqual(minutes * 60000 - 1000);
+      expect(delay).toBeLessThan(minutes * 60000 + 10000);
+    });
     it(`agenda a próxima rodada em ${minutes} minutos`, async () => {
       await configure("sinopse", minutes);
       await check(sb.from("typing_battle_settings").update({ next_run_at: new Date(0).toISOString() }).eq("chat_id", chat));

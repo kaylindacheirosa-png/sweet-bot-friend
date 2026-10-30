@@ -71,6 +71,13 @@
       "when": 1793363288477,
       "tag": "0009_typing_minigame_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793397494891,
+      "tag": "0010_typing_frequency_reschedule",
+      "breakpoints": true
     }
   ]
 }

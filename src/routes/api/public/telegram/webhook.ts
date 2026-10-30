@@ -463,7 +463,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
               parse_mode: "HTML",
               reply_markup: { inline_keyboard: page.keyboard },
             });
-            if (s.enabled && (action === "toggle" || action === "freq" || action.startsWith("style:"))) {
+            if (s.enabled && action === "toggle") {
               const { dispatchTypingBattles } = await import("@/lib/telegram-typing.server");
               await dispatchTypingBattles(undefined, msg.chat.id);
             }

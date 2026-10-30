@@ -566,6 +566,12 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
+        if (firstWord === "/topgame" || firstWord === "/ranking") {
+          const { buildGroupRanking } = await import("@/lib/telegram-typing.server");
+          await sendTelegramMessage(chatId, await buildGroupRanking(firstWord === "/topgame" ? "typing" : "games", chatId));
+          return Response.json({ ok: true });
+        }
+
         if (firstWord === "/quiz") {
           const first = buildQuestionMessage(0, 0);
           await sendTelegramMessage(
@@ -672,6 +678,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             // Avança já, para um segundo acerto simultâneo não contar de novo
             if (r.finished) activeGames.delete(chatId);
             else activeGames.set(chatId, r.state);
+            const { addGamePoints } = await import("@/lib/telegram-typing.server");
+            await addGamePoints(chatId, user);
             await sendTelegramMessage(chatId, buildCorrectMessage(name, r.display));
             if (r.finished) await finishSinopse(chatId, r.state);
             else await postSinopseRound(chatId, r.state);

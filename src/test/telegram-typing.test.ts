@@ -71,6 +71,7 @@ describe.skipIf(!enabled)("Typing Battle com banco real, sem enviar mensagens re
       const settings = await check(sb.from("typing_battle_settings").select("next_run_at").eq("chat_id", chat).single());
       if (!settings) throw new Error("Missing settings");
       expect(new Date(settings.next_run_at).getTime() - new Date(row.started_at).getTime()).toBe(minutes * 60000);
+      expect(new Date(row.expires_at).getTime() - new Date(row.started_at).getTime()).toBe(600000);
     });
   }
   it("erros ficam silenciosos e somente o primeiro acerto vence, mesmo simultaneamente", async () => {
@@ -117,5 +118,16 @@ describe.skipIf(!enabled)("Typing Battle com banco real, sem enviar mensagens re
       expect(result.sent).toBe(0);
       expect((await active()).status).toBe("failed");
     } finally { quiet.mockRestore(); }
+  });
+});
+import { typingPoints, buildTypingRound } from "@/lib/telegram-typing.server";
+describe("pontos do Typing Battle", () => {
+  it("até 2 min 7, até 4 min 5, até 8 min 4, até 10 min 2", () => {
+    expect([60, 120, 121, 240, 241, 480, 481, 600].map(typingPoints)).toEqual([7, 7, 5, 5, 4, 4, 2, 2]);
+  });
+  it("mensagem diz MINIGAME e 10 minutos", () => {
+    const t = buildTypingRound("título\n\nsinopse");
+    expect(t).toContain("𝗠𝗜𝗡𝗜𝗚𝗔𝗠𝗘");
+    expect(t.endsWith("- Tens 10 minutos para responder!")).toBe(true);
   });
 });

@@ -3,10 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Bot do Telegram" },
-      { name: "description", content: "Bot de respostas automáticas para o Telegram." },
-      { property: "og:title", content: "Bot do Telegram" },
-      { property: "og:description", content: "Bot de respostas automáticas para o Telegram." },
+      { title: "Yaoitopic — Bot do Telegram" },
+      { name: "description", content: "Yaoitopic: jogos de BL, Typing Battle e Gems no Telegram." },
+      { property: "og:title", content: "Yaoitopic — Bot do Telegram" },
+      { property: "og:description", content: "Yaoitopic: jogos de BL, Typing Battle e Gems no Telegram." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

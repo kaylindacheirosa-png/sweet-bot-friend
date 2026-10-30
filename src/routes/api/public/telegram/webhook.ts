@@ -465,7 +465,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             });
             if (s.enabled && (action === "toggle" || action === "freq" || action.startsWith("style:"))) {
               const { dispatchTypingBattles } = await import("@/lib/telegram-typing.server");
-              await dispatchTypingBattles({ send: sendTelegramMessage, photo: sendTelegramPhoto }, msg.chat.id);
+              await dispatchTypingBattles(undefined, msg.chat.id);
             }
           }
           return Response.json({ ok: true });
@@ -566,6 +566,12 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           return Response.json({ ok: true });
         }
 
+        if (firstWord === "/topgame" || firstWord === "/ranking") {
+          const { buildGroupRanking } = await import("@/lib/telegram-typing.server");
+          await sendTelegramMessage(chatId, await buildGroupRanking(firstWord === "/topgame" ? "typing" : "games", chatId));
+          return Response.json({ ok: true });
+        }
+
         if (firstWord === "/quiz") {
           const first = buildQuestionMessage(0, 0);
           await sendTelegramMessage(
@@ -632,8 +638,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         // Mensagem normal: se houver jogo ativo, é um palpite (erros ficam em silêncio)
         if (photoId && !message.text) return Response.json({ ok: true, ignored: true });
         if (!text.trim().startsWith("/")) {
-          const { handleTypingGuess } = await import("@/lib/telegram-typing.server");
-          if (await handleTypingGuess(update, { send: sendTelegramMessage, photo: sendTelegramPhoto })) {
+          const { handleTypingGuess, typingTransport } = await import("@/lib/telegram-typing.server");
+          if (await handleTypingGuess(update, typingTransport)) {
             return Response.json({ ok: true });
           }
           const active = activeGames.get(chatId);
@@ -672,6 +678,8 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             // Avança já, para um segundo acerto simultâneo não contar de novo
             if (r.finished) activeGames.delete(chatId);
             else activeGames.set(chatId, r.state);
+            const { addGamePoints } = await import("@/lib/telegram-typing.server");
+            await addGamePoints(chatId, user);
             await sendTelegramMessage(chatId, buildCorrectMessage(name, r.display));
             if (r.finished) await finishSinopse(chatId, r.state);
             else await postSinopseRound(chatId, r.state);

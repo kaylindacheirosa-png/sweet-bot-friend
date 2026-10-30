@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { selectedTypingStyles } from "@/lib/telegram-responses.server";
-import { buildSinopseRound, buildCorrectMessage, normalize, parseAnswers, toRounds } from "@/lib/telegram-sinopse.server";
+import { buildSinopseRound, normalize, parseAnswers, toRounds } from "@/lib/telegram-sinopse.server";
 
 const roundSchema = z.object({
   id: z.string().uuid(), synopsis: z.string(), answer: z.string(),
@@ -9,9 +9,27 @@ const roundSchema = z.object({
 type Round = z.infer<typeof roundSchema>;
 type Game = "sinopse" | "peitoral";
 export type TypingTransport = {
-  send: (chat: number, text: string) => Promise<number | null>;
+  send: (chat: number, text: string, replyTo?: number) => Promise<number | null>;
   photo: (chat: number, photo: string, text: string) => Promise<number | null>;
 };
+
+/** Pontos do Typing Battle conforme o tempo de acerto (em segundos). */
+export function typingPoints(seconds: number) {
+  return seconds <= 120 ? 7 : seconds <= 240 ? 5 : seconds <= 480 ? 4 : 2;
+}
+export function formatElapsed(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds)), m = Math.floor(s / 60), r = s % 60;
+  if (!m) return `${r} segundo${r === 1 ? "" : "s"}`;
+  return r ? `${m} min ${r} s` : `${m} minuto${m === 1 ? "" : "s"}`;
+}
+export function buildTypingRound(text: string) {
+  const lines = text.split("\n");
+  lines[0] = '.﹒୨<tg-emoji emoji-id="5294091248712324204">🎮</tg-emoji> 𝗠𝗜𝗡𝗜𝗚𝗔𝗠𝗘';
+  return `${lines.join("\n")}\n\n- Tens 10 minutos para responder!`;
+}
+export function buildTypingCorrect(seconds: number, points: number) {
+  return `﹒𑁘 <tg-emoji emoji-id="5436040291507247633">🎉</tg-emoji> BOAAA!! Certa reposta!﹒ ੭\nVocê adivinhou a palavra em ${formatElapsed(seconds)} ᰍ﹐\n＋﹒୨ ${points} pontos no rank do grupo`;
+}
 
 export function matchesTypingAnswer(answer: string, guess: string) {
   const value = normalize(guess);
@@ -36,7 +54,7 @@ async function send(method: string, payload: Record<string, unknown>): Promise<n
   return data.result?.message_id ?? null;
 }
 export const typingTransport: TypingTransport = {
-  send: (chat, text) => send("sendMessage", { chat_id: chat, text }),
+  send: (chat, text, replyTo) => send("sendMessage", { chat_id: chat, text, ...(replyTo ? { reply_parameters: { message_id: replyTo, allow_sending_without_reply: true } } : {}) }),
   photo: (chat, photo, caption) => send("sendPhoto", { chat_id: chat, photo, caption }),
 };
 
@@ -74,7 +92,7 @@ export async function dispatchTypingBattles(io: TypingTransport = typingTranspor
       const state = game === "peitoral"
         ? { order: [0], position: 0, players: [], rounds: [round], game: "peitoral" as const }
         : { order: [0], position: 0, players: [], rounds: [round] };
-      const text = buildSinopseRound(state);
+      const text = buildTypingRound(buildSinopseRound(state));
       const messageId = row.photo_file_id
         ? await io.photo(chat.chat_id, row.photo_file_id, text)
         : await io.send(chat.chat_id, text);
@@ -95,7 +113,7 @@ export async function dispatchTypingBattles(io: TypingTransport = typingTranspor
 }
 
 const messageSchema = z.object({ message: z.object({
-  text: z.string(), date: z.number().int(), chat: z.object({ id: z.number().int() }),
+  text: z.string(), message_id: z.number().int().optional(), date: z.number().int(), chat: z.object({ id: z.number().int() }),
   from: z.object({ id: z.number().int(), is_bot: z.boolean().optional(), first_name: z.string().optional(), last_name: z.string().optional(), username: z.string().optional() }),
 }) });
 
@@ -110,13 +128,29 @@ export async function handleTypingGuess(update: unknown, io: TypingTransport): P
   if (!active) return false;
   const round = roundSchema.safeParse(active.snapshot);
   if (!round.success || !matchesTypingAnswer(round.data.answer, message.text)) return true;
-  const { data: won, error: claimError } = await sb.rpc("telegram_typing_claim", {
+  const name = [message.from.first_name, message.from.last_name].filter(Boolean).join(" ") || message.from.username || "Participante";
+  const { data: won, error: claimError } = await sb.rpc("telegram_typing_claim_points", {
     p_chat_id: message.chat.id, p_token: active.token, p_user_id: message.from.id, p_message_date: message.date,
+    p_name: name, p_username: message.from.username ?? "",
   });
   if (claimError) throw claimError;
-  if (won) {
-    const name = [message.from.first_name, message.from.last_name].filter(Boolean).join(" ") || message.from.username || "Participante";
-    await io.send(message.chat.id, buildCorrectMessage(name, round.data.answer));
-  }
+  const result = z.object({ elapsed: z.number(), points: z.number() }).safeParse(won);
+  if (result.success) await io.send(message.chat.id, buildTypingCorrect(result.data.elapsed, result.data.points), message.message_id);
   return true;
+}
+function escapeHtml(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+/** Ranking persistente do grupo: "typing" (/topgame) ou "games" (/ranking). */
+export async function buildGroupRanking(board: "typing" | "games", chatId: number) {
+  const sb = await db();
+  const { data, error } = await sb.from("telegram_group_scores").select("user_id,name,username,points").eq("board", board).eq("chat_id", chatId).order("points", { ascending: false }).limit(10);
+  if (error) throw error;
+  const medals = ["🥇", "🥈", "🥉"];
+  const title = board === "typing" ? "Ranking Typing Battle" : "Ranking dos jogos";
+  const lines = (data ?? []).map((p, i) => `ಲ ${medals[i] ?? `${i + 1}.`} ${p.username ? `@${escapeHtml(p.username)}` : `<a href="tg://user?id=${p.user_id}">${escapeHtml(p.name)}</a>`}﹕${p.points} ponto${p.points === 1 ? "" : "s"}﹒ಿ`);
+  return `◟ㆍ${title} <tg-emoji emoji-id="5422546251587527850">🏆</tg-emoji>𑁯\n\n${lines.length ? lines.join("\n") : "Ninguém pontuou ainda."}`;
+}
+export async function addGamePoints(chatId: number, user: { id: number; name: string; username?: string }, points = 1) {
+  const sb = await db();
+  const { error } = await sb.rpc("telegram_add_game_points", { p_chat_id: chatId, p_user_id: user.id, p_name: user.name, p_username: user.username ?? "", p_points: points });
+  if (error) console.error("game points failed", error.message);
 }

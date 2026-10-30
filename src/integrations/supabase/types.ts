@@ -236,6 +236,36 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_group_scores: {
+        Row: {
+          board: string
+          chat_id: number
+          name: string
+          points: number
+          updated_at: string
+          user_id: number
+          username: string | null
+        }
+        Insert: {
+          board: string
+          chat_id: number
+          name: string
+          points?: number
+          updated_at?: string
+          user_id: number
+          username?: string | null
+        }
+        Update: {
+          board?: string
+          chat_id?: number
+          name?: string
+          points?: number
+          updated_at?: string
+          user_id?: number
+          username?: string | null
+        }
+        Relationships: []
+      }
       telegram_pending_confirmations: {
         Row: {
           action: string
@@ -498,6 +528,16 @@ export type Database = {
           next_daily_at: string
         }[]
       }
+      telegram_add_game_points: {
+        Args: {
+          p_chat_id: number
+          p_name: string
+          p_points: number
+          p_user_id: number
+          p_username: string
+        }
+        Returns: undefined
+      }
       telegram_character_action: {
         Args: {
           p_action: string
@@ -528,6 +568,17 @@ export type Database = {
           p_user_id: number
         }
         Returns: boolean
+      }
+      telegram_typing_claim_points: {
+        Args: {
+          p_chat_id: number
+          p_message_date: number
+          p_name: string
+          p_token: string
+          p_user_id: number
+          p_username: string
+        }
+        Returns: Json
       }
       telegram_typing_prepare: {
         Args: {

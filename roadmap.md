@@ -1,7 +1,7 @@
 # Bot Telegram
-- [ ] Corrigir envio imediato ao mudar frequência e verificar envio contínuo do Typing Battle.
+- [x] Corrigir envio imediato ao mudar frequência: próximo envio reagendado sem apagar rodada ativa; 28 testes passaram e compilação OK.
 - [x] Implementar Typing Battle automático com frequência e estilos salvos, rodada persistida e primeiro vencedor atômico; 34 testes passaram e uma rodada foi enviada ao Telegram.
-- [ ] Disponibilizar o Typing Battle contínuo no endereço público: aguarda publicação solicitada pela dona; endereço remoto atual retorna 404 para a nova função agendada.
+- [ ] Disponibilizar Typing Battle contínuo: aguarda autorização da dona para publicar. Agendamento gerenciado ativo a cada minuto; chamada autenticada na prévia enviou 2 minigames reais, mas execução independente não processou chat temporário em 120 segundos e endereço de produção continua 404, sem versão publicada.
 - [x] Criar /delete e /editar exclusivos da dona, por resposta ao perfil/rodada, com confirmação de exclusão; 37 testes passaram, incluindo banco real e reembolso único. Envio em conversa real do Telegram não verificado.
 - [x] Cadastrar personagens com foto e mostrar /im com posição e preço por interesse.
 - [x] Implementar /wish (até 5), /casar, /dar, /trocar com aceite e /divórcio com reembolso integral.

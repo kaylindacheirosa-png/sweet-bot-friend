@@ -32,6 +32,9 @@ import {
   currentRound,
   type SinopseState,
   type ExtraGame,
+  currentPhoto,
+  advancePixel,
+  PIXEL_PHASE_MS,
 } from "@/lib/telegram-sinopse.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
@@ -121,7 +124,9 @@ async function handleAddFlow(
     await sb.from("bot_add_sessions").update({ step: "synopsis", game }).eq("user_id", userId);
     await sendTelegramMessage(
       chatId,
-      ["peitoral", "pixel", "capa", "cabelo", "olho"].includes(game)
+      game === "pixel"
+        ? "🖼️ Mande a foto 1 de 4 (a mais pixelada). Depois mando pedir as outras. (ou /cancelar)"
+        : ["peitoral", "capa", "cabelo", "olho"].includes(game)
         ? "🖼️ Mande a imagem da rodada (pode ter legenda) ou um texto. (ou /cancelar)"
         : game === "emoji"
           ? "😀 Mande a sequência de emojis da rodada. (ou /cancelar)"
@@ -130,6 +135,26 @@ async function handleAddFlow(
     return true;
   }
   if (t.startsWith("/")) return false;
+  if (session.step === "synopsis" && session.game === "pixel") {
+    if (!photo) {
+      await sendTelegramMessage(chatId, "🖼️ Mande uma foto. (ou /cancelar)");
+      return true;
+    }
+    const saved = session.synopsis?.startsWith("photo:") ? session.synopsis.slice(6).split("\n")[0]!.split("|") : [];
+    saved.push(photo);
+    const done = saved.length >= 4;
+    await sb
+      .from("bot_add_sessions")
+      .update({ step: done ? "answer" : "synopsis", synopsis: `photo:${saved.join("|")}\n` })
+      .eq("user_id", userId);
+    await sendTelegramMessage(
+      chatId,
+      done
+        ? "✅ 4 fotos salvas! Agora, qual é a resposta? Para aceitar alternativas, separe com / (ex.: Carro/Vela)."
+        : `✅ Foto ${saved.length}/4 salva! Mande a foto ${saved.length + 1} (menos pixelada).`,
+    );
+    return true;
+  }
   if (session.step === "synopsis") {
     await sb
       .from("bot_add_sessions")
@@ -244,13 +269,50 @@ const wrongGuessers = new Map<number, { id: number; name: string; username?: str
 async function postSinopseRound(chatId: number, state: SinopseState): Promise<void> {
   activeGames.set(chatId, state);
   const round = currentRound(state);
-  const result = round.photo
-    ? await sendTelegramPhoto(chatId, round.photo, buildSinopseRound(state))
+  const photo = currentPhoto(state);
+  if (state.game === "pixel" && round.photos) {
+    state.phaseStartedAt = Date.now();
+    schedulePixelCheck(chatId, state);
+  }
+  const caption = state.game === "pixel" && round.photos
+    ? `${buildSinopseRound(state)}\n\n🔎 Fase ${(state.phase ?? 0) + 1}/4 — vale ${4 - (state.phase ?? 0)} ponto${state.phase === 3 ? "" : "s"}`
+    : buildSinopseRound(state);
+  const result = photo
+    ? await sendTelegramPhoto(chatId, photo, caption)
     : await sendTelegramMessage(chatId, buildSinopseRound(state));
   if (round.id) {
     const { recordContentMessage } = await import("@/lib/telegram-content.server");
     await recordContentMessage(chatId, result, "round", round.id);
   }
+}
+
+/** Melhor esforço: confere a fase do pixel depois de 3 minutos. */
+function schedulePixelCheck(chatId: number, state: SinopseState) {
+  const position = state.position, phase = state.phase ?? 0;
+  setTimeout(() => {
+    const active = activeGames.get(chatId);
+    if (active === state && active.position === position && (active.phase ?? 0) === phase)
+      void checkPixelPhase(chatId).catch((e) => console.error("pixel phase failed", e));
+  }, PIXEL_PHASE_MS + 500);
+}
+
+/** Avança a fase do /game_pixel se o tempo passou. Retorna true se a rodada mudou. */
+async function checkPixelPhase(chatId: number): Promise<boolean> {
+  const active = activeGames.get(chatId);
+  if (!active) return false;
+  const step = advancePixel(active, Date.now());
+  if (step === "phase") {
+    await postSinopseRound(chatId, active);
+    return true;
+  }
+  if (step === "expired") {
+    await sendTelegramMessage(chatId, `⏰ Ninguém acertou! Era <b>${currentRound(active).display.replace(/[<>&]/g, "")}</b>.`);
+    const next = skipRound(active);
+    if (next.finished) await finishSinopse(chatId, next.state);
+    else await postSinopseRound(chatId, next.state);
+    return true;
+  }
+  return false;
 }
 
 async function finishSinopse(chatId: number, state: SinopseState): Promise<void> {
@@ -667,6 +729,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           if (await handleTypingGuess(update, typingTransport)) {
             return Response.json({ ok: true });
           }
+          if (await checkPixelPhase(chatId)) return Response.json({ ok: true });
           const active = activeGames.get(chatId);
           if (active) {
             const round = currentRound(active);
@@ -704,7 +767,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             if (r.finished) activeGames.delete(chatId);
             else activeGames.set(chatId, r.state);
             const { addGamePoints } = await import("@/lib/telegram-typing.server");
-            await addGamePoints(chatId, user);
+            await addGamePoints(chatId, user, r.points);
             await sendTelegramMessage(chatId, buildCorrectMessage(name, r.display));
             if (r.finished) await finishSinopse(chatId, r.state);
             else await postSinopseRound(chatId, r.state);

@@ -9,6 +9,8 @@ export interface SinopseRound {
   display: string;
   /** file_id de foto do Telegram (rodadas com imagem). */
   photo?: string;
+  /** Fotos por fase (/game_pixel: da mais pixelada à mais nítida). */
+  photos?: string[];
 }
 
 export interface Player {
@@ -28,6 +30,9 @@ export interface SinopseState {
   rounds?: SinopseRound[];
   /** Tipo do jogo quando usa rodadas próprias (peitoral, emoji). */
   game?: ExtraGame;
+  /** Fase atual do /game_pixel (0 a 3). */
+  phase?: number;
+  phaseStartedAt?: number;
 }
 
 function roundsOf(state: SinopseState): SinopseRound[] {
@@ -43,7 +48,8 @@ export function toRounds(
     synopsis: r.synopsis ? `"${escapeHtml(r.synopsis)}"` : "",
     answers: parseAnswers(r.answer),
     display: r.answer,
-    ...(r.photo_file_id ? { photo: r.photo_file_id } : {}),
+    ...(r.photo_file_id ? { photo: r.photo_file_id.split("|")[0]! } : {}),
+    ...(r.photo_file_id?.includes("|") ? { photos: r.photo_file_id.split("|") } : {}),
   }));
 }
 
@@ -55,6 +61,32 @@ export const IMAGE_GAME_QUESTIONS: Record<"pixel" | "capa" | "cabelo" | "olho", 
   cabelo: "De qual personagem é esse cabelo? ᰍ﹒💭",
   olho: "De qual personagem são esses olhos? ᰍ﹒💭",
 };
+
+export const PIXEL_PHASES = 4;
+export const PIXEL_PHASE_MS = 3 * 60_000;
+
+/** Foto que deve aparecer agora (no pixel, a da fase atual). */
+export function currentPhoto(state: SinopseState): string | undefined {
+  const round = currentRound(state);
+  return round.photos?.[state.phase ?? 0] ?? round.photo;
+}
+
+/** Pontos de um acerto agora: pixel vale 4, 3, 2, 1 conforme a fase. */
+export function pointsNow(state: SinopseState): number {
+  if (state.game !== "pixel" || !currentRound(state).photos) return 1;
+  return Math.max(1, PIXEL_PHASES - (state.phase ?? 0));
+}
+
+/** Passados 3 minutos sem acerto: próxima fase, ou fim da rodada após a 4ª. */
+export function advancePixel(state: SinopseState, now: number): "phase" | "expired" | null {
+  if (state.game !== "pixel" || !currentRound(state).photos || state.phaseStartedAt === undefined) return null;
+  if (now - state.phaseStartedAt < PIXEL_PHASE_MS) return null;
+  const phase = (state.phase ?? 0) + 1;
+  if (phase >= Math.min(PIXEL_PHASES, currentRound(state).photos!.length)) return "expired";
+  state.phase = phase;
+  state.phaseStartedAt = now;
+  return "phase";
+}
 
 export const MAX_ROUNDS = 13;
 
@@ -194,7 +226,7 @@ export function mergeParticipants(
 }
 
 export type GuessResult =
-  { correct: false } | { correct: true; state: SinopseState; finished: boolean; display: string };
+  { correct: false } | { correct: true; points: number; state: SinopseState; finished: boolean; display: string };
 
 export function applyGuess(
   state: SinopseState,
@@ -206,11 +238,13 @@ export function applyGuess(
   const g = normalize(guess);
   if (!round || !g || !round.answers.some((a) => normalize(a) === g)) return { correct: false };
   const merged = mergeParticipants(state, [user]);
-  merged.players.find((p) => p.id === user.id)!.points += 1;
+  const points = pointsNow(state);
+  merged.players.find((p) => p.id === user.id)!.points += points;
   const next = state.position + 1;
   return {
     correct: true,
-    state: { ...merged, position: next },
+    points,
+    state: { ...merged, position: next, phase: 0 },
     finished: next >= state.order.length,
     display: round.display,
   };
@@ -218,7 +252,7 @@ export function applyGuess(
 
 export function skipRound(state: SinopseState): { state: SinopseState; finished: boolean } {
   const next = state.position + 1;
-  return { state: { ...state, position: next }, finished: next >= state.order.length };
+  return { state: { ...state, position: next, phase: 0 }, finished: next >= state.order.length };
 }
 
 export function buildCorrectMessage(name: string, display: string): string {

@@ -27,7 +27,7 @@ export interface SinopseState {
   /** Rodadas deste jogo (padrão: SINOPSE_ROUNDS). */
   rounds?: SinopseRound[];
   /** Tipo do jogo quando usa rodadas próprias (peitoral, emoji). */
-  game?: "peitoral" | "emoji";
+  game?: ExtraGame;
 }
 
 function roundsOf(state: SinopseState): SinopseRound[] {
@@ -46,6 +46,15 @@ export function toRounds(
     ...(r.photo_file_id ? { photo: r.photo_file_id } : {}),
   }));
 }
+
+export type ExtraGame = "peitoral" | "emoji" | "pixel" | "capa" | "cabelo" | "olho";
+/** Pergunta de cada jogo novo com imagem. */
+export const IMAGE_GAME_QUESTIONS: Record<"pixel" | "capa" | "cabelo" | "olho", string> = {
+  pixel: "Que obra ou personagem está escondido nesses pixels? ᰍ﹒💭",
+  capa: "De qual obra é essa capa? ᰍ﹒💭",
+  cabelo: "De qual personagem é esse cabelo? ᰍ﹒💭",
+  olho: "De qual personagem são esses olhos? ᰍ﹒💭",
+};
 
 export const MAX_ROUNDS = 13;
 
@@ -119,7 +128,7 @@ function boldNum(n: number): string {
 export function newGame(
   random: () => number = Math.random,
   rounds?: SinopseRound[],
-  game?: "peitoral" | "emoji",
+  game?: ExtraGame,
 ): SinopseState {
   const pool = (rounds ?? SINOPSE_ROUNDS)
     .map((r, i) => (r.answers.length ? i : -1))
@@ -157,6 +166,8 @@ export function buildSinopseRound(state: SinopseState): string {
   const question =
     game === "peitoral"
       ? 'Que personagem ou obra é esses seios suculentos? <tg-emoji emoji-id="6042098256152894179">💭</tg-emoji>ᰍ﹒'
+      : game in IMAGE_GAME_QUESTIONS
+        ? IMAGE_GAME_QUESTIONS[game as keyof typeof IMAGE_GAME_QUESTIONS]
       : game === "emoji"
         ? 'Que obra esses emojis representam? ᰍ﹒<tg-emoji emoji-id="5003988713496118896">💭</tg-emoji>'
         : 'Que obra é essa?? ᰍ﹒<tg-emoji emoji-id="5472231485534652748">💭</tg-emoji>';

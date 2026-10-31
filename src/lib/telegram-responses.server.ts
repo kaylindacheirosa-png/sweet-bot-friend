@@ -19,7 +19,7 @@ export const FIXED_RESPONSES: FixedResponse[] = [
       "/quiz — Jogar o quiz de perguntas 🎮",
       "/game_sinopse — Adivinhe a obra pela sinopse 🍿",
       "/game_peitoral — Descubra de quem é o peitoral 👀",
-      "/game_emoji — Adivinhe a obra pelos emojis 😀",
+      "/game_emoji — Adivinhe a obra pelos emojis 😀\n/game_pixel — Imagem pixelada 👾\n/game_capa — Adivinhe pela capa 📚\n/game_cabelo — De quem é esse cabelo 💇\n/game_olho — De quem são esses olhos 👀",
       "/pular_rodada — Pular a rodada atual do game_sinopse",
       "/parar_sinopse — Encerrar o game_sinopse e ver o placar",
       "/horario — Ver horário de atendimento",
@@ -62,7 +62,7 @@ const SETTINGS_PAGES: Record<string, { text: string; keyboard: Keyboard }> = {
     ],
   },
   jogos: {
-    text: "🎮 <b>Jogos</b>\n\n/quiz — Quiz de perguntas\n/game_sinopse — Adivinhe a obra pela sinopse 🍿\n/game_peitoral — Descubra de quem é o peitoral 👀\n/game_emoji — Adivinhe a obra pelos emojis 😀",
+    text: "🎮 <b>Jogos</b>\n\n/quiz — Quiz de perguntas\n/game_sinopse — Adivinhe a obra pela sinopse 🍿\n/game_peitoral — Descubra de quem é o peitoral 👀\n/game_emoji — Adivinhe a obra pelos emojis 😀\n/game_pixel — Imagem pixelada 👾\n/game_capa — Adivinhe pela capa 📚\n/game_cabelo — De quem é esse cabelo 💇\n/game_olho — De quem são esses olhos 👀",
     keyboard: BACK,
   },
   controles: {

@@ -31,6 +31,7 @@ import {
   toRounds,
   currentRound,
   type SinopseState,
+  type ExtraGame,
 } from "@/lib/telegram-sinopse.server";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";

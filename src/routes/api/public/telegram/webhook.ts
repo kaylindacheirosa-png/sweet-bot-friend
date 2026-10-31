@@ -43,7 +43,7 @@ async function db() {
   return supabaseAdmin;
 }
 
-async function loadRounds(game: "sinopse" | "peitoral" | "emoji") {
+async function loadRounds(game: "sinopse" | ExtraGame) {
   const { data, error } = await (
     await db()
   )
@@ -83,7 +83,7 @@ async function handleAddFlow(
       .upsert({ user_id: userId, step: "game", synopsis: null, game: null });
     await sendTelegramMessage(
       chatId,
-      "🎮 O que você quer adicionar?\n\n1 — /game_sinopse\n2 — /game_peitoral\n3 — /game_emoji\n4 — Personagem\n\n(ou /cancelar)",
+      "🎮 O que você quer adicionar?\n\n1 — /game_sinopse\n2 — /game_peitoral\n3 — /game_emoji\n4 — Personagem\n5 — /game_pixel\n6 — /game_capa\n7 — /game_cabelo\n8 — /game_olho\n\n(ou /cancelar)",
     );
     return true;
   }
@@ -105,18 +105,22 @@ async function handleAddFlow(
           ? "peitoral"
           : g === "3" || g.includes("emoji")
             ? "emoji"
+            : g === "5" || g.includes("pixel") ? "pixel"
+            : g === "6" || g.includes("capa") ? "capa"
+            : g === "7" || g.includes("cabelo") ? "cabelo"
+            : g === "8" || g.includes("olho") ? "olho"
             : null;
     if (!game) {
       await sendTelegramMessage(
         chatId,
-        "Responda 1 (/game_sinopse), 2 (/game_peitoral) ou 3 (/game_emoji).",
+        "Responda 1 (/game_sinopse), 2 (/game_peitoral), 3 (/game_emoji), 5 (/game_pixel), 6 (/game_capa), 7 (/game_cabelo) ou 8 (/game_olho).",
       );
       return true;
     }
     await sb.from("bot_add_sessions").update({ step: "synopsis", game }).eq("user_id", userId);
     await sendTelegramMessage(
       chatId,
-      game === "peitoral"
+      ["peitoral", "pixel", "capa", "cabelo", "olho"].includes(game)
         ? "🖼️ Mande a imagem da rodada (pode ter legenda) ou um texto. (ou /cancelar)"
         : game === "emoji"
           ? "😀 Mande a sequência de emojis da rodada. (ou /cancelar)"
@@ -164,6 +168,13 @@ const SINOPSE_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5444896024445352143">�
 const PEITORAL_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5240004588114829391">✨</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5082316568944182103">💋</tg-emoji>OGO DO <tg-emoji emoji-id="5134415857979491173">📎</tg-emoji>EITOTAL <tg-emoji emoji-id="6042107490332579591">🙃</tg-emoji> ゙౿\n\n＞ <tg-emoji emoji-id="5890739983689455462">💬</tg-emoji>﹒Neste jogo, sua missão é descobrir de quem são os incríveis, majestosos e suculentos (ou não) seios. ﹒⢷⌒𑁯\n\n﹒★﹑Sua reposta vale ao nome do personagem e da obra.﹗﹒\n\n﹒﹒<tg-emoji emoji-id="6042001219956775130">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="5260339961181275846">🍀</tg-emoji>`;
 
 const EMOJI_INTRO_MESSAGE = `𖼥﹒<tg-emoji emoji-id="5269464520417363323">💋</tg-emoji>﹒⦙⦙𑊁᷼  <tg-emoji emoji-id="5251430025755903710">💋</tg-emoji>DIVINHA PELO <tg-emoji emoji-id="5003988713496118896">📎</tg-emoji>MOJI  ゙౿\n\n＞ <tg-emoji emoji-id="5429477976615961027">💬</tg-emoji>﹒Nesse jogo, iremos mandar uma sequência de emojis e sua missão é adivinhar de qual obra estamos nos referindo. ﹒⢷⌒𑁯\n\n﹒﹒<tg-emoji emoji-id="5343844021020154537">💗</tg-emoji>﹑<tg-emoji emoji-id="5226719305080527970">💜</tg-emoji>oa <tg-emoji emoji-id="5226469050221094046">💌</tg-emoji>orte﹗﹒<tg-emoji emoji-id="6041684689456994224">🍀</tg-emoji>`;
+
+const IMAGE_GAME_INTROS = {
+  pixel: "👾 <b>JOGO DO PIXEL</b>\n\nVamos mandar uma imagem pixelada. Sua missão é descobrir a obra ou o personagem!\n\nBoa sorte! 🍀",
+  capa: "📚 <b>JOGO DA CAPA</b>\n\nVamos mandar uma capa. Sua missão é descobrir de qual obra ela é!\n\nBoa sorte! 🍀",
+  cabelo: "💇 <b>JOGO DO CABELO</b>\n\nVamos mandar um cabelo. Sua missão é descobrir de qual personagem ele é!\n\nBoa sorte! 🍀",
+  olho: "👀 <b>JOGO DO OLHO</b>\n\nVamos mandar um par de olhos. Sua missão é descobrir de qual personagem eles são!\n\nBoa sorte! 🍀",
+} as const;
 
 function deriveWebhookSecret(telegramApiKey: string): string {
   return createHash("sha256").update(`telegram-webhook:${telegramApiKey}`).digest("base64url");
@@ -602,6 +613,19 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           await new Promise((resolve) => setTimeout(resolve, 10_000));
           wrongGuessers.delete(chatId);
           const game = newGame(Math.random, toRounds(await loadRounds("peitoral")), "peitoral");
+          if (game.order.length === 0) {
+            await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
+          } else await postSinopseRound(chatId, game);
+          return Response.json({ ok: true });
+        }
+
+        // Jogos novos com imagem: mesmas regras do peitoral
+        const imageGame = ({ "/game_pixel": "pixel", "/game_capa": "capa", "/game_cabelo": "cabelo", "/game_olho": "olho" } as const)[firstWord as "/game_pixel"];
+        if (imageGame) {
+          await sendTelegramMessage(chatId, IMAGE_GAME_INTROS[imageGame]);
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
+          wrongGuessers.delete(chatId);
+          const game = newGame(Math.random, toRounds(await loadRounds(imageGame)), imageGame);
           if (game.order.length === 0) {
             await sendTelegramMessage(chatId, "Ainda não há rodadas cadastradas.");
           } else await postSinopseRound(chatId, game);
